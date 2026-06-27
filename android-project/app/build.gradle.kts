@@ -44,7 +44,7 @@ kotlin {
 }
 
 dependencies {
-  implementation(project(":air-os-spine"))
+  implementation("com.airos:air-os-spine:1.0.0")
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
   androidTestImplementation(composeBom)

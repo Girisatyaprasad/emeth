@@ -75,13 +75,7 @@ object StepCounterRepository : SensorEventListener {
 
         if (storedDate != today && storedDate != null) {
             // New day
-            if (rawValue >= lastRaw) {
-                // Approximate missed steps to today
-                stepsToday = rawValue - lastRaw
-            } else {
-                // Reboot overnight
-                stepsToday = rawValue
-            }
+            stepsToday = 0f
         } else if (storedDate == null) {
             // First run ever
             stepsToday = 0f

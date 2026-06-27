@@ -1,0 +1,206 @@
+Emeth Headless Digital Assistant Product Plan
+Date: 2026-06-22
+
+Purpose
+Emeth should become a useful, non-intelligent Android digital assistant: deterministic, permission-aware, fast, private, and honest. It does not need general AI to be valuable. It needs to reliably understand common commands, know what it can do, complete safe tasks headlessly, prepare risky tasks cleanly, and explain exactly where Android or app limitations require confirmation.
+
+Current capability inventory
+Emeth already has a working kernel:
+1. HomeScreen sends user text to Planner.process().
+2. IntentResolver normalizes text, expands phrases, extracts entities, and maps text to an Intent.
+3. SkillRegistry selects a Skill.
+4. ExecutionEngine runs the Skill and publishes events.
+5. MemoryStore logs commands and app usage.
+6. WatcherWorker supports periodic background checks.
+
+What Emeth can do now
+- Device info: check battery, storage, RAM, clipboard, and some step-count state.
+- Device actions: flashlight, mute, volume surface, brightness/settings surfaces.
+- Apps and media: open YouTube, search YouTube, open some YouTube deep links, play a URL, remember last played YouTube URL, open camera, video camera, and voice recorder.
+- Productivity: set alarms, timers, stopwatch surface, calendar surfaces, and step watchers.
+- Communication: open dialer, SMS surface, contacts search, WhatsApp open/share/pre-send surfaces.
+- Files: query MediaStore, rank likely files, list deletion/move candidates, detect obvious duplicates by name and size, and find latest downloaded video for WhatsApp status pre-send.
+- Memory: store command/app usage records and answer basic activity queries.
+- Conversation: basic greetings, identity, capability fallback, unsupported-command fallback.
+
+What keeps it from being a paid-useful headless assistant
+- It cannot yet classify each action by execution mode: true headless, app intent, confirmation-required, accessibility-required, or unsupported.
+- Many skills still open screens instead of completing tasks.
+- Some skills ignore extracted entities or use placeholders: web search query, contacts, timers, notes/reminders/calendar details, generic app open.
+- Confidence is fake; ParsedCommand currently returns 1.0 even for weak matches.
+- Partial prompts do not preserve pending task state, so follow-up replies are treated as new commands.
+- There is no permission and capability recovery model: Emeth should know what permission or service is missing and guide the user.
+- WhatsApp, YouTube like/comment/subscribe, unread chat state, status posting, and many third-party app actions are not public Android app-intent actions. They need Accessibility, notification listener, app-specific APIs, or user confirmation.
+- File delete/move work is selection-oriented but does not yet execute Android MediaStore delete/write requests after user selection.
+- Memory is mostly a log, not a context engine for preferences, recent targets, or task continuation.
+
+Definition of "true headless" for Emeth
+- Headless means no visible app launch and no final user tap required.
+- App-intent assisted means Android or another app opens a screen with data prefilled.
+- Confirmation-required means Emeth can prepare the exact action, but Android or product safety requires the user to confirm.
+- Accessibility-required means Emeth can theoretically operate another app's UI if an Accessibility service is built and explicitly enabled.
+- Unsupported means public Android APIs and app intents do not expose the action.
+
+Paid-useful product direction
+Emeth should become excellent at a limited set of practical workflows:
+1. File command center: find files by fuzzy name, type, recency, source, and duplicate groups; safely delete/move/share after explicit selection.
+2. Communication prep and automation: contacts, SMS, WhatsApp pre-send, status prep, unread-notification summaries, and clear limits for headless third-party messaging.
+3. Personal command memory: remember recent files, chats, apps, searches, and user preferences.
+4. Device automation: watchers for battery, storage, steps, time, location-ready future hooks, and app/package events.
+5. Intent router: understand, clarify, resume, execute, or refuse based on capability and risk.
+6. Permission cockpit: show what is enabled, what is missing, and what new powers each permission unlocks.
+
+Implementation plan
+Step 1: Capability ledger and headless contract
+- Add a central CapabilityRegistry that maps intents to execution mode, risk level, required permission/service, and user-facing limit.
+- Add a capability query skill so Emeth can answer "what can you do headlessly?" honestly.
+- Use this registry as the source of truth for future UI chips, planner checks, and safety gates.
+
+Step 2: Real confidence and clarification
+- Replace Intent-only matching with IntentMatch(intent, score, reasons).
+- Set ParsedCommand.confidence from the score.
+- Clarify missing fields for contact, file, destination, message, query, timer duration, alarm time, and calendar details.
+
+Step 3: Pending command continuation
+- Store the last Partial command with missing slots.
+- Merge the user's next reply into the pending command.
+- Add expiry and cancel commands.
+
+Step 4: Entity-driven core skills
+- Make web search use the extracted query.
+- Make generic app open resolve installed apps and aliases.
+- Make contacts/call/SMS/WhatsApp use extracted contact and message data.
+- Make timers, reminders, notes, and calendar use extracted content instead of placeholders.
+
+Step 5: File manager execution
+- Add user-selection commands for file candidates.
+- Use Android MediaStore create/delete/write APIs where possible.
+- Add duplicate safety: keep newest, keep largest, never delete all copies, and require confirmation for destructive batches.
+
+Step 6: Permission cockpit
+- Track contacts, calendar, media, notifications, activity recognition, notification listener, accessibility, and manage-files status.
+- Return recovery actions when a skill fails because capability is missing.
+
+Step 7: Optional Accessibility service
+- Add explicit user-enabled Accessibility only for actions public intents cannot complete.
+- Build guarded UI automation recipes for supported apps.
+- Keep risky actions confirmation-first unless the user explicitly opts into a trusted automation rule.
+
+Step 8: Useful background automation
+- Expand WatcherWorker into battery/storage/file-download/app-event watchers.
+- Let users create simple deterministic rules such as "when a PDF downloads, show it in Emeth" or "when storage is low, list cleanup candidates."
+
+Step 9: Product polish
+- Add a capability dashboard, pending-task UI, candidate selection UI, and concise activity log.
+- Package common workflows as command cards: files, WhatsApp prep, YouTube, device cleanup, reminders, and watchers.
+
+First step implemented in this pass
+Implement Step 1: Capability ledger and headless contract.
+
+Second step implemented in the next pass
+Implemented the first half of Step 2: real command confidence.
+- Added IntentMatch with intent, score, normalized confidence, and match reasons.
+- Kept the old SemanticIntentMatcher.match() compatibility helper.
+- Changed IntentResolver to preserve matcher confidence instead of hardcoding 1.0.
+- Added matchReasons to ParsedCommand for debug and future clarification UI.
+- Updated Planner debug output to show confidence and reasons.
+- Added tests for strong, weak, and unknown confidence behavior.
+
+Remaining Step 2 work
+- Add richer clarification prompts for missing contact, file destination, message, query, timer duration, and calendar details.
+- Start storing which slot is missing so Step 3 pending-command continuation can merge the user's next reply.
+
+Next phase implemented
+Implemented the first phone-control bridge phase.
+- Added an Accessibility-backed UI command layer for Back, Home, notification shade, quick settings, tapping visible text, typing into focused/editable fields, and scrolling.
+- Added Emeth Accessibility service declaration and service config. User must enable Emeth Access in Android Accessibility settings.
+- Added command routing for "tap X", "type X", "scroll up/down", "go back", "go home", "open notifications", and "open quick settings".
+- Replaced placeholder generic app opening with installed-app resolution.
+- Replaced placeholder web search with real user-query search.
+- Removed remaining Home example chips so the UI is no longer a demo prompt board.
+- Fixed file-vs-web search ambiguity in the entity extractor.
+
+Next required work
+- Build a UI snapshot model from Accessibility windows: package, screen text, clickable nodes, editable fields, scrollable regions.
+- Add a deterministic action planner that can execute small app recipes from the snapshot.
+- Add notification-listener support for read/mark-style workflows that cannot be done through public app intents.
+- Add automation editing details: rename, enable/disable, repeat, and exact trigger/action summary.
+
+Screen observation phase implemented
+- Added Accessibility screen snapshots with current package, optional window title, visible node text, class name, clickable/editable/scrollable flags, and screen bounds.
+- Added "what's on screen", "read screen", "describe screen", and "list buttons" commands.
+- Added indexed screen actions: "tap 3" taps the third visible indexed node from the current Accessibility snapshot.
+- Kept text actions: "tap Allow", "type hello", and scroll commands.
+
+Next required work
+- Persist the most recent screen snapshot and expose it to a future model/router.
+- Add small deterministic recipes such as: open app -> read screen -> tap visible control -> type -> confirm.
+- Add app-specific recipe packs for WhatsApp, settings, files, browser, and YouTube.
+
+Recipe runner phase implemented
+- Added RUN_PHONE_RECIPE intent and recipeName parsing.
+- Added PhoneRecipeSkill with deterministic multi-step recipes:
+  - open_and_read: open an installed app, wait briefly, read the screen snapshot.
+  - search_and_read: run a web search, wait briefly, read the screen snapshot.
+  - prepare_whatsapp_message: open WhatsApp share/message prep, then read the screen snapshot.
+- Added RecipeTrace data so future model/router code can inspect which steps ran and what screen snapshot resulted.
+- Added NLU routing for "inspect app", "search X then read screen", and "prepare WhatsApp message X".
+
+Next required work
+- Move recipe execution off blocking Thread.sleep into coroutine-friendly delayed execution.
+- Add recipe packs with named, testable steps for Settings, WhatsApp, Files, Browser, and YouTube.
+- Persist recent RecipeTrace entries for debugging and model handoff.
+
+Recipe memory phase implemented
+- Added SCREEN_SNAPSHOT and RECIPE_TRACE memory types.
+- PhoneRecipeSkill now persists compact JSON recipe traces and screen snapshots after each recipe.
+- Added memory recall intents for "last screen", "previous screen snapshot", "last recipe", and "last phone task".
+- MemorySkill can return the latest saved screen snapshot or recipe trace.
+- Only one APK name should be copied to phone storage from now on: emeth.apk.
+
+Next required work
+- Replace blocking recipe sleeps with coroutine-aware delayed continuation.
+- Add an on-device recipe debugger page for latest trace and latest snapshot.
+- Add named recipe packs for Settings, WhatsApp, Files, Browser, and YouTube.
+
+Notification access phase implemented
+- Added EmethNotificationListenerService for Android Notification Access.
+- Added real active-notification snapshots with app name, package, title, text, post time, and exposed action labels.
+- Replaced the fake notification response with a listener-backed NotificationSkill.
+- "Read notifications" now summarizes real active notifications when Notification Access is enabled.
+- "Mark all unread WhatsApp messages as read" now attempts WhatsApp notification actions when WhatsApp exposes a Mark as read/read action.
+- Added a recovery path: if Notification Access is missing, Emeth opens Android Notification Access settings and explains what to enable.
+- Added capability ledger entries for notification awareness and notification-access setup.
+
+Next required work
+- Add a permission cockpit screen showing Accessibility, Notification Access, media, contacts, calendar, activity recognition, and notification-post permission states.
+- Add notification memory so Emeth can answer "what did I miss?" from recent observed notifications.
+- Add notification-based automation triggers, such as "when WhatsApp from X arrives, notify/ring/read it".
+
+Permission cockpit phase implemented
+- Added PermissionCockpit to track real Android access state for Accessibility, Notification Access, notification posting, media, contacts, calendar, activity recognition, and phone/SMS.
+- Added a third icon-only Access tab that shows enabled/missing access and opens the correct setup surface.
+- Added "permission status" and "what access is enabled" command routing.
+- Added PermissionStatusSkill so Emeth can report access state from Home.
+
+Next required work
+- Add Android runtime permission request flows inside Emeth for app permissions that can be requested in-app.
+- Add notification memory so Emeth can answer "what did I miss?" from recent observed notifications.
+- Add notification-based automation triggers.
+
+Runtime permission request phase implemented
+- Access cards now distinguish special Android access from normal runtime permissions.
+- Accessibility and Notification Access still open their required Android settings pages.
+- Requestable permissions now use Android's in-app permission dialog from the Access tab:
+  - Post notifications
+  - Media images/video/audio or legacy external storage
+  - Contacts
+  - Calendar read/write
+  - Activity recognition
+  - Phone and SMS
+- Each requestable card also has a Settings fallback for denied/do-not-ask-again cases.
+
+Next required work
+- Add notification memory so Emeth can answer "what did I miss?" from recent observed notifications.
+- Add notification-based automation triggers.
+- Add a direct deployment path that does not depend on Windows CrossDevice mirroring.

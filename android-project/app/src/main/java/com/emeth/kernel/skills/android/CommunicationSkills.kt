@@ -1,0 +1,210 @@
+package com.emeth.kernel.skills.android
+
+import android.content.ClipData
+import android.content.ContentUris
+import android.content.Context
+import android.content.Intent as AndroidIntent
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import android.provider.ContactsContract
+import com.emeth.kernel.intents.Intent
+import com.emeth.kernel.skills.Skill
+import com.emeth.kernel.skills.SkillRequest
+import com.emeth.kernel.skills.SkillResult
+
+class CallContactSkill(private val context: Context) : Skill {
+    override val id = "android.call"
+    override val name = "Call Contact"
+    override val description = "Opens dialer to call"
+
+    override fun canHandle(intent: Intent) = intent == Intent.CALL_CONTACT
+
+    override fun execute(request: SkillRequest): SkillResult {
+        val i = AndroidIntent(AndroidIntent.ACTION_DIAL).apply {
+            flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(i)
+        return SkillResult.Success("Opened Dialer")
+    }
+}
+
+class SmsContactSkill(private val context: Context) : Skill {
+    override val id = "android.sms"
+    override val name = "SMS Contact"
+    override val description = "Opens SMS app to send message"
+
+    override fun canHandle(intent: Intent) = intent == Intent.SMS_CONTACT
+
+    override fun execute(request: SkillRequest): SkillResult {
+        val i = AndroidIntent(AndroidIntent.ACTION_VIEW).apply {
+            data = Uri.parse("sms:")
+            flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(i)
+        return SkillResult.Success("Opened SMS")
+    }
+}
+
+class WhatsAppSkill(private val context: Context) : Skill {
+    override val id = "android.whatsapp.open"
+    override val name = "Open WhatsApp"
+    override val description = "Opens WhatsApp"
+
+    override fun canHandle(intent: Intent) = intent == Intent.OPEN_WHATSAPP ||
+        intent == Intent.SEND_WHATSAPP ||
+        intent == Intent.SEND_WHATSAPP_STATUS ||
+        intent == Intent.MARK_WHATSAPP_READ ||
+        intent == Intent.MUTE_WHATSAPP_CHAT
+
+    override fun execute(request: SkillRequest): SkillResult {
+        return when (request.command.intentType) {
+            Intent.SEND_WHATSAPP -> sendMessage(request)
+            Intent.SEND_WHATSAPP_STATUS -> sendStatus(request)
+            Intent.MARK_WHATSAPP_READ -> unsupportedChatStateAction("mark WhatsApp chats as read")
+            Intent.MUTE_WHATSAPP_CHAT -> unsupportedChatStateAction("list or mute WhatsApp chats")
+            else -> openWhatsApp()
+        }
+    }
+
+    private fun openWhatsApp(): SkillResult {
+        var i = context.packageManager.getLaunchIntentForPackage("com.whatsapp")
+        if (i == null) {
+            i = AndroidIntent(AndroidIntent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.whatsapp"))
+        }
+        i.flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        context.startActivity(i)
+        return SkillResult.Success("Opened WhatsApp")
+    }
+
+    private fun sendMessage(request: SkillRequest): SkillResult {
+        if (request.command.actionMode == "headless") {
+            return SkillResult.Partial(
+                "Android public app intents do not allow true headless WhatsApp sends. I can prepare the WhatsApp send screen with the message filled in.",
+                mapOf("supportedMode" to "two_step")
+            )
+        }
+
+        val rawText = request.command.rawText.lowercase()
+        val message = request.command.message ?: extractMessageBeforeRecipient(rawText)
+        if (message.isNullOrBlank()) {
+            return SkillResult.Partial("What message should I send on WhatsApp?")
+        }
+
+        val phone = Regex("\\+?[0-9][0-9\\s-]{7,}").find(rawText)?.value?.filter { it.isDigit() }
+        val intent = if (!phone.isNullOrBlank()) {
+            AndroidIntent(AndroidIntent.ACTION_VIEW, Uri.parse("https://wa.me/$phone?text=${Uri.encode(message)}"))
+        } else {
+            AndroidIntent(AndroidIntent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(AndroidIntent.EXTRA_TEXT, message)
+                setPackage("com.whatsapp")
+            }
+        }.apply {
+            flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        }
+
+        context.startActivity(intent)
+        return SkillResult.Success("Prepared WhatsApp message${if (phone.isNullOrBlank()) "" else " to $phone"}.")
+    }
+
+    private fun sendStatus(request: SkillRequest): SkillResult {
+        val latestVideo = latestDownloadedVideo()
+            ?: return SkillResult.Partial("I couldn't find a downloaded video to send to WhatsApp status.")
+
+        if (request.command.actionMode == null) {
+            return SkillResult.Partial(
+                "I found the latest downloaded video. Choose headless or two_step; with app intents, two_step is the supported status method.",
+                latestVideo
+            )
+        }
+
+        if (request.command.actionMode == "headless") {
+            return SkillResult.Partial(
+                "WhatsApp status cannot be posted headlessly through public Android app intents. I can ready the latest video at the pre-send screen.",
+                latestVideo
+            )
+        }
+
+        val uri = Uri.parse(latestVideo.uri)
+        val intent = AndroidIntent(AndroidIntent.ACTION_SEND).apply {
+            type = latestVideo.mimeType ?: "video/*"
+            putExtra(AndroidIntent.EXTRA_STREAM, uri)
+            clipData = ClipData.newUri(context.contentResolver, latestVideo.displayName, uri)
+            addFlags(AndroidIntent.FLAG_GRANT_READ_URI_PERMISSION)
+            flags = flags or AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+            setPackage("com.whatsapp")
+        }
+
+        context.startActivity(intent)
+        return SkillResult.Success("Prepared latest downloaded video for WhatsApp status.")
+    }
+
+    private fun unsupportedChatStateAction(action: String): SkillResult {
+        return SkillResult.Partial(
+            "I can recognize this request, but Android app intents do not expose WhatsApp chat lists, unread state, or mute controls. I can open WhatsApp so you can finish $action there.",
+            mapOf("supportedFallback" to "open_whatsapp")
+        )
+    }
+
+    private fun latestDownloadedVideo(): SmartFileCandidate? {
+        val collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        val projection = buildList {
+            add(MediaStore.Video.Media._ID)
+            add(MediaStore.Video.Media.DISPLAY_NAME)
+            add(MediaStore.Video.Media.SIZE)
+            add(MediaStore.Video.Media.DATE_MODIFIED)
+            add(MediaStore.Video.Media.MIME_TYPE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                add(MediaStore.Video.Media.RELATIVE_PATH)
+            }
+        }.toTypedArray()
+        val selection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) "${MediaStore.Video.Media.RELATIVE_PATH} LIKE ?" else null
+        val args = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) arrayOf("Download%") else null
+        val sort = "${MediaStore.Video.Media.DATE_ADDED} DESC"
+
+        context.contentResolver.query(collection, projection, selection, args, sort)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val id = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID))
+                val uri = ContentUris.withAppendedId(collection, id)
+                val pathIndex = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    cursor.getColumnIndex(MediaStore.Video.Media.RELATIVE_PATH)
+                } else {
+                    -1
+                }
+                return SmartFileCandidate(
+                    displayName = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)) ?: "latest downloaded video",
+                    uri = uri.toString(),
+                    mimeType = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.MIME_TYPE)),
+                    relativePath = if (pathIndex >= 0) cursor.getString(pathIndex) else null,
+                    sizeBytes = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.SIZE)),
+                    modifiedAtSeconds = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_MODIFIED)),
+                    score = 100
+                )
+            }
+        }
+
+        return null
+    }
+
+    private fun extractMessageBeforeRecipient(rawText: String): String? {
+        val match = Regex("(?:send|text|message)\\s+(.+?)\\s+to\\s+").find(rawText)
+        return match?.groupValues?.getOrNull(1)?.trim()
+    }
+}
+
+class ContactsSearchSkill(private val context: Context) : Skill {
+    override val id = "android.contacts.search"
+    override val name = "Search Contacts"
+    override val description = "Searches for a contact"
+
+    override fun canHandle(intent: Intent) = intent == Intent.FIND_CONTACT
+
+    override fun execute(request: SkillRequest): SkillResult {
+        val i = AndroidIntent(AndroidIntent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI).apply {
+            flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(i)
+        return SkillResult.Success("Opened Contacts Picker")
+    }
+}

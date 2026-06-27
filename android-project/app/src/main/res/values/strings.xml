@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Emeth</string>
+    <string name="emeth_accessibility_description">Allows Emeth to control Android UI actions such as Back, Home, notifications, quick settings, and future app automation after you explicitly enable access.</string>
+</resources>

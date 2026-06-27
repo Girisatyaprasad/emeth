@@ -1,0 +1,76 @@
+package com.emeth.kernel.skills.android
+
+/**
+ * YouTube Operation Map - Phase 9
+ * Maps every user-level YouTube operation Emeth should understand and its implementation level.
+ */
+enum class YouTubeSupportLevel {
+    DIRECT_INTENT,
+    DEEP_LINK_URL,
+    MEMORY_BASED,
+    ACCESSIBILITY_REQUIRED,
+    NOT_ALLOWED_BY_ANDROID,
+    UNKNOWN_UNTIL_TESTED
+}
+
+enum class YouTubeOperation(val level: YouTubeSupportLevel) {
+    // Open / Navigation
+    OPEN_YOUTUBE(YouTubeSupportLevel.DIRECT_INTENT),
+    OPEN_YOUTUBE_HOME(YouTubeSupportLevel.DIRECT_INTENT),
+    OPEN_SUBSCRIPTIONS(YouTubeSupportLevel.DEEP_LINK_URL),
+    OPEN_LIBRARY_YOU_PAGE(YouTubeSupportLevel.DEEP_LINK_URL),
+    OPEN_HISTORY(YouTubeSupportLevel.DEEP_LINK_URL),
+    OPEN_WATCH_LATER(YouTubeSupportLevel.DEEP_LINK_URL),
+    OPEN_LIKED_VIDEOS(YouTubeSupportLevel.DEEP_LINK_URL),
+    OPEN_YOUR_VIDEOS(YouTubeSupportLevel.DEEP_LINK_URL),
+    OPEN_DOWNLOADS(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    OPEN_PLAYLISTS(YouTubeSupportLevel.DEEP_LINK_URL),
+    OPEN_SHORTS_TAB(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED), // Deep link opens a specific short, not the tab itself reliably
+    
+    // Search
+    SEARCH_YOUTUBE(YouTubeSupportLevel.DIRECT_INTENT),
+    SEARCH_SHORTS(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+
+    // Playback
+    PLAY_VIDEO_URL(YouTubeSupportLevel.DEEP_LINK_URL),
+    PLAY_VIDEO_BY_TITLE_MEMORY(YouTubeSupportLevel.MEMORY_BASED),
+    PLAY_LAST_PLAYED(YouTubeSupportLevel.MEMORY_BASED),
+    REPLAY_LAST_VIDEO(YouTubeSupportLevel.MEMORY_BASED),
+    PLAY_LAST_SHORT(YouTubeSupportLevel.MEMORY_BASED),
+    CONTINUE_SHORTS(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+
+    // Shorts
+    OPEN_SHORTS(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    NEXT_SHORT(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    PREVIOUS_SHORT(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    LIKE_CURRENT_SHORT(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    SAVE_CURRENT_SHORT(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+
+    // Creation
+    UPLOAD_VIDEO(YouTubeSupportLevel.DIRECT_INTENT), // ACTION_SEND or ACTION_VIDEO_CAPTURE
+    CREATE_SHORT(YouTubeSupportLevel.UNKNOWN_UNTIL_TESTED),
+    GO_LIVE(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    OPEN_CAMERA_FOR_UPLOAD(YouTubeSupportLevel.UNKNOWN_UNTIL_TESTED),
+
+    // Actions On Current Video
+    LIKE_CURRENT_VIDEO(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    DISLIKE_CURRENT_VIDEO(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    SAVE_CURRENT_VIDEO(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    ADD_TO_WATCH_LATER(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    SHARE_CURRENT_VIDEO(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    SUBSCRIBE_CHANNEL(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    OPEN_COMMENTS(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    FULL_SCREEN(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    PAUSE_VIDEO(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    PLAY_VIDEO(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    NEXT_VIDEO(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    PREVIOUS_VIDEO(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+
+    // Account / Settings
+    OPEN_YOUTUBE_SETTINGS(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    OPEN_ACCOUNT(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    SWITCH_ACCOUNT(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    OPEN_NOTIFICATIONS(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    OPEN_PURCHASES(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED),
+    OPEN_TIME_WATCHED(YouTubeSupportLevel.ACCESSIBILITY_REQUIRED)
+}

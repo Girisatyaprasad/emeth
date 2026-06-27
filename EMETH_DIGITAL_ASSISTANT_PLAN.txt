@@ -1,0 +1,90 @@
+Emeth Digital Assistant Analysis and Plan
+Date: 2026-06-22
+
+Current state
+Emeth is not only an app opener in code, but the user-facing behavior still feels like one. The Android app already has a kernel-style pipeline:
+
+1. HomeScreen accepts a text command and calls Planner.process().
+2. Planner sends the text through IntentResolver.
+3. IntentResolver normalizes text, expands phrases, extracts entities, and asks SemanticIntentMatcher for an intent.
+4. SkillRegistry maps the intent to one registered Skill.
+5. ExecutionEngine runs the skill and returns SkillResult.
+6. MemoryStore records successful, partial, and failed commands.
+
+What Emeth can do today
+- Open and deep-link YouTube, including search, Shorts, history, watch later, liked videos, playlists, subscriptions, upload, create short, and last-played style actions.
+- Open generic browser/search flows, although WebSearchSkill still uses a placeholder query.
+- Open settings pages and some device panels.
+- Check battery, storage, RAM, steps, and some device state.
+- Start camera, video, voice recording, alarms, timers, stopwatch, calendar flows.
+- Handle some communication flows such as calls, SMS, WhatsApp, and contact search.
+- Create watcher-style conditions such as step-count reminders, with WorkManager-based polling scaffolding.
+- Store command and app-usage memory and answer a few memory questions.
+
+Why it still feels like a pure non-intelligent mobile assistant
+- It is action-first, not conversation-first. If no skill is found, Planner returns null and the UI says "I'm not sure how to do that."
+- Confidence is effectively fake. ParsedCommand confidence is always 1.0, so the clarification paths rarely represent real uncertainty.
+- Intent matching is keyword/scoring based and mostly hand-authored. It cannot infer broader user goals, decompose tasks, or recover from ambiguous language.
+- The skill layer is broad but shallow. Many skills open a screen or return placeholder data instead of completing a full assistant task.
+- The UI has no dialogue state. A partial answer asks a question, but the next user reply is treated as a fresh command instead of continuing the prior task.
+- Generic app opening is not implemented deeply. OpenAppSkill returns "Ready to open app" instead of resolving installed packages.
+- Web search ignores the user's query and uses a placeholder.
+- Contact, note, reminder, and calendar skills are not yet entity-driven enough to feel personal.
+- Memory exists but is mostly a log. It does not yet personalize future decisions, remember preferences, or explain previous activity naturally.
+- There is no reasoning layer that can decide: answer locally, ask a clarification, invoke a skill, search the web, or chain multiple actions.
+- There is no permission-aware capability model. The assistant should know what it can do, what permission is missing, and how to guide the user.
+
+Target assistant behavior
+Emeth should become a mobile digital assistant that can:
+- Understand user intent beyond exact phrases.
+- Ask useful clarifying questions when needed.
+- Complete Android actions through skills.
+- Answer conversational prompts about identity, capability, and next steps.
+- Use memory to recall past actions and preferences.
+- Route questions to local knowledge, web search, or an LLM-backed reasoning layer when available.
+- Explain limits honestly instead of silently failing.
+- Keep the app responsive and permission-safe.
+
+Phased implementation plan
+
+Phase 1: Conversational fallback and capability awareness
+- Add an assistant responder for greetings, identity/capability questions, unsupported requests, and no-skill cases.
+- Ensure Planner never returns null for user text; return a human SkillResult instead.
+- Add tests for unknown commands, capability questions, and greetings.
+- Update suggestions to include assistant-like prompts.
+
+Phase 2: Real command confidence and clarification
+- Change SemanticIntentMatcher to return intent plus score/reasons instead of only an Intent.
+- Set ParsedCommand.confidence from the score.
+- Add clarification prompts for missing entities such as app, contact, query, time, note body, and calendar details.
+- Persist pending partial commands so follow-up replies complete the original action.
+
+Phase 3: Make core skills actually complete work
+- Implement installed-app resolution in OpenAppSkill.
+- Use the user's query in WebSearchSkill.
+- Use extracted contacts in contact/call/SMS/WhatsApp skills.
+- Use extracted timer duration, note content, reminder content, calendar title/date/time, and search terms.
+- Return specific failures when an app, contact, permission, or provider is missing.
+
+Phase 4: Memory as assistant context
+- Store structured command records instead of hand-built JSON strings.
+- Add preference memory, recent-topic memory, and last-app/last-query recall.
+- Let Planner pass a context snapshot into assistant response generation and skills.
+- Add "what did I do", "open that again", and "search the same thing" flows.
+
+Phase 5: Reasoning/router layer
+- Add a Router decision model: answer, clarify, execute skill, search web, query memory, or multi-step plan.
+- Keep the first version local and deterministic; later add an optional LLM provider behind an interface.
+- Add a safety policy for sensitive actions such as calls, messages, purchases, and settings changes.
+
+Phase 6: Better mobile assistant UX
+- Replace one-shot input with a small conversation transcript.
+- Show capability chips based on available permissions and installed apps.
+- Show permission recovery steps in plain language.
+- Add voice input/output once text behavior is reliable.
+
+First implemented step
+Implement Phase 1's core fallback:
+- Create a pure-Kotlin DigitalAssistantResponder.
+- Wire Planner.process() to return a helpful SkillResult when no skill is available.
+- Add unit tests for the new responder.

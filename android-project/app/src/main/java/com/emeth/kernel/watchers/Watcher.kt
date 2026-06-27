@@ -24,6 +24,12 @@ data class WatcherCondition(
     val targetValue: Float? = null
 )
 
+enum class WatcherRecurrence {
+    ONCE,
+    DAILY,
+    SELECTIVE_DAYS
+}
+
 data class WatcherAction(
     val type: String = "local_notification",
     val payload: String
@@ -33,5 +39,7 @@ data class Watcher(
     val id: String,
     val type: WatcherType,
     val condition: WatcherCondition,
-    val action: WatcherAction
+    val action: WatcherAction,
+    val recurrence: WatcherRecurrence = WatcherRecurrence.ONCE,
+    val selectedDays: List<Int> = emptyList() // 1 = Sunday, 7 = Saturday
 )

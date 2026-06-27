@@ -178,8 +178,7 @@ class WhatsAppSkill(private val context: Context) : Skill {
 
         context.startActivity(intent)
         if (!phone.isNullOrBlank()) {
-            Thread.sleep(1200)
-            if (com.emeth.kernel.access.EmethAccessibilityService.tapText("Send")) {
+            if (com.emeth.kernel.access.EmethAccessibilityService.waitForAndClick("Send", 5000)) {
                 return SkillResult.Success("Sent WhatsApp message to ${contact ?: phone}.")
             }
             return SkillResult.Partial(

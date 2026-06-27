@@ -49,7 +49,14 @@ class WatcherRegistry(private val context: Context) {
                     action = WatcherAction(
                         type = actObj.getString("type"),
                         payload = actObj.getString("payload")
-                    )
+                    ),
+                    recurrence = if (obj.has("recurrence")) WatcherRecurrence.valueOf(obj.getString("recurrence")) else WatcherRecurrence.ONCE,
+                    selectedDays = if (obj.has("selectedDays")) {
+                        val daysArr = obj.getJSONArray("selectedDays")
+                        val days = mutableListOf<Int>()
+                        for (j in 0 until daysArr.length()) days.add(daysArr.getInt(j))
+                        days
+                    } else emptyList()
                 )
             )
         }
@@ -72,6 +79,10 @@ class WatcherRegistry(private val context: Context) {
                 put("type", w.type.name)
                 put("condition", cond)
                 put("action", act)
+                put("recurrence", w.recurrence.name)
+                val daysArr = JSONArray()
+                w.selectedDays.forEach { daysArr.put(it) }
+                put("selectedDays", daysArr)
             }
             array.put(obj)
         }

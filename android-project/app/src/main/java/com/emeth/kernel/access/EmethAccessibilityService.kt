@@ -107,6 +107,15 @@ class EmethAccessibilityService : AccessibilityService() {
             return target.performClickUpTree()
         }
 
+        fun waitForAndClick(text: String, timeoutMs: Long = 5000): Boolean {
+            val startTime = System.currentTimeMillis()
+            while (System.currentTimeMillis() - startTime < timeoutMs) {
+                if (tapText(text)) return true
+                Thread.sleep(250)
+            }
+            return false
+        }
+
         fun snapshot(maxNodes: Int = 40): ScreenSnapshot? {
             val service = instance ?: return null
             val root = service.rootInActiveWindow ?: return null

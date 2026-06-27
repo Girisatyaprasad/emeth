@@ -8,7 +8,7 @@ class AirOsSpineDatabase(context: Context) : SQLiteOpenHelper(
     context.applicationContext,
     "air_os_spine.db",
     null,
-    1
+    2
 ) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -28,16 +28,18 @@ class AirOsSpineDatabase(context: Context) : SQLiteOpenHelper(
         createSharedTable(db, AirOsContract.Paths.UI_MAPS)
         createSharedTable(db, AirOsContract.Paths.ACCESS)
         createSharedTable(db, AirOsContract.Paths.BEHAVIORS)
+        createSharedTable(db, AirOsContract.Paths.IDENTITY)
         db.execSQL("CREATE INDEX memories_kind_time ON memories(kind, created_at DESC)")
         db.execSQL("CREATE INDEX ui_maps_node_key ON ui_maps(node_id, key)")
         db.execSQL("CREATE INDEX access_node_key ON access(node_id, key)")
         db.execSQL("CREATE INDEX behaviors_kind_time ON behaviors(kind, created_at DESC)")
+        db.execSQL("CREATE INDEX identity_node_key ON identity(node_id, key)")
     }
 
     private fun createSharedTable(db: SQLiteDatabase, table: String) {
         db.execSQL(
             """
-            CREATE TABLE $table (
+            CREATE TABLE IF NOT EXISTS $table (
                 id TEXT PRIMARY KEY,
                 node_id TEXT NOT NULL,
                 kind TEXT NOT NULL,
@@ -53,5 +55,10 @@ class AirOsSpineDatabase(context: Context) : SQLiteOpenHelper(
         )
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            createSharedTable(db, AirOsContract.Paths.IDENTITY)
+            db.execSQL("CREATE INDEX IF NOT EXISTS identity_node_key ON identity(node_id, key)")
+        }
+    }
 }

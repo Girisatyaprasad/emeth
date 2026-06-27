@@ -84,6 +84,7 @@ class AirOsSpineProvider : ContentProvider() {
         UI_MAPS -> AirOsContract.Paths.UI_MAPS
         ACCESS -> AirOsContract.Paths.ACCESS
         BEHAVIORS -> AirOsContract.Paths.BEHAVIORS
+        IDENTITY -> AirOsContract.Paths.IDENTITY
         else -> throw IllegalArgumentException("Unknown Air OS spine URI: $uri")
     }
 
@@ -93,6 +94,7 @@ class AirOsSpineProvider : ContentProvider() {
         const val UI_MAPS = 3
         const val ACCESS = 4
         const val BEHAVIORS = 5
+        const val IDENTITY = 6
 
         val MATCHER = UriMatcher(UriMatcher.NO_MATCH).apply {
             addURI(AirOsContract.AUTHORITY, AirOsContract.Paths.NODES, NODES)
@@ -100,6 +102,7 @@ class AirOsSpineProvider : ContentProvider() {
             addURI(AirOsContract.AUTHORITY, AirOsContract.Paths.UI_MAPS, UI_MAPS)
             addURI(AirOsContract.AUTHORITY, AirOsContract.Paths.ACCESS, ACCESS)
             addURI(AirOsContract.AUTHORITY, AirOsContract.Paths.BEHAVIORS, BEHAVIORS)
+            addURI(AirOsContract.AUTHORITY, AirOsContract.Paths.IDENTITY, IDENTITY)
         }
     }
 }

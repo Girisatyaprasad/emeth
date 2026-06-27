@@ -1,120 +1,278 @@
 package com.emeth.kernel.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import com.emeth.kernel.watchers.ConditionOp
-import com.emeth.kernel.watchers.Watcher
-import com.emeth.kernel.watchers.WatcherRegistry
-import com.emeth.kernel.watchers.WatcherType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.emeth.kernel.watchers.*
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ActivityScreen() {
     val context = LocalContext.current
     val registry = remember { WatcherRegistry(context) }
     var automations by remember { mutableStateOf(listOf<Watcher>()) }
 
+    var selectedWatcher by remember { mutableStateOf<Watcher?>(null) }
+    var showSheet by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         automations = registry.getAllWatchers()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp)
-    ) {
-        Spacer(modifier = Modifier.height(48.dp))
-        Text("Automations", style = MaterialTheme.typography.headlineLarge)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            "Rules Emeth can watch in the background.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.secondary
-        )
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize()
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 24.dp)
         ) {
-            if (automations.isEmpty()) {
-                item {
-                    AutomationCard(
-                        title = "No automations yet",
-                        body = "Create one from Home by telling Emeth what to watch."
-                    )
-                }
-            } else {
-                items(automations, key = { it.id }) { watcher ->
-                    AutomationCard(
-                        title = formatWatcherTitle(watcher),
-                        body = watcher.action.payload,
-                        onDelete = {
-                            registry.removeWatcher(watcher.id)
-                            automations = registry.getAllWatchers()
-                        }
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(48.dp))
+            Text(
+                "Automations",
+                style = MaterialTheme.typography.headlineLarge.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Rules Emeth watches in the background.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
 
-            item {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Automations shown here are real saved rules. Delete removes the rule from Emeth.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(bottom = 24.dp)
-                )
+            Spacer(modifier = Modifier.height(32.dp))
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (automations.isEmpty()) {
+                    item {
+                        AutomationCard(
+                            watcher = null,
+                            title = "No automations yet",
+                            body = "Create one from Home by telling Emeth what to watch.",
+                            onLongPress = {}
+                        )
+                    }
+                } else {
+                    items(automations, key = { it.id }) { watcher ->
+                        AutomationCard(
+                            watcher = watcher,
+                            title = formatWatcherTitle(watcher),
+                            body = watcher.action.payload,
+                            onLongPress = {
+                                selectedWatcher = watcher
+                                showSheet = true
+                            }
+                        )
+                    }
+                }
             }
+        }
+    }
+
+    if (showSheet && selectedWatcher != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            AutomationMenuSheet(
+                watcher = selectedWatcher!!,
+                onUpdate = { updated ->
+                    registry.addWatcher(updated)
+                    automations = registry.getAllWatchers()
+                    showSheet = false
+                },
+                onDelete = {
+                    registry.removeWatcher(selectedWatcher!!.id)
+                    automations = registry.getAllWatchers()
+                    showSheet = false
+                }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun AutomationCard(
+    watcher: Watcher?,
+    title: String,
+    body: String,
+    onLongPress: () -> Unit
+) {
+    val haptics = LocalHapticFeedback.current
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (isPressed) 0.96f else 1f, label = "scale")
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
+            .combinedClickable(
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongPress()
+                },
+                onClick = {}
+            )
+            .padding(20.dp)
+    ) {
+        Column {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                if (watcher != null) {
+                    val recurrenceText = when (watcher.recurrence) {
+                        WatcherRecurrence.ONCE -> "Once"
+                        WatcherRecurrence.DAILY -> "Daily"
+                        WatcherRecurrence.SELECTIVE_DAYS -> "Custom"
+                    }
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = recurrenceText,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                body,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
 
 @Composable
-private fun AutomationCard(title: String, body: String, onDelete: (() -> Unit)? = null) {
-    val haptics = LocalHapticFeedback.current
-    Card(
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        modifier = Modifier.fillMaxWidth()
+private fun AutomationMenuSheet(
+    watcher: Watcher,
+    onUpdate: (Watcher) -> Unit,
+    onDelete: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp)
+            .padding(bottom = 32.dp)
     ) {
+        Text(
+            text = "Schedule",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
         Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-            if (onDelete != null) {
-                IconButton(onClick = {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onDelete()
-                }) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Delete automation")
-                }
-            }
+            ScheduleOption(
+                title = "Once",
+                selected = watcher.recurrence == WatcherRecurrence.ONCE,
+                onClick = { onUpdate(watcher.copy(recurrence = WatcherRecurrence.ONCE)) },
+                modifier = Modifier.weight(1f)
+            )
+            ScheduleOption(
+                title = "Daily",
+                selected = watcher.recurrence == WatcherRecurrence.DAILY,
+                onClick = { onUpdate(watcher.copy(recurrence = WatcherRecurrence.DAILY)) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = onDelete,
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+        ) {
+            Icon(
+                Icons.Filled.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Delete Automation",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScheduleOption(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val bgColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+    val textColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Surface(
+        onClick = onClick,
+        color = bgColor,
+        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.height(64.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = textColor
+            )
         }
     }
 }

@@ -14,11 +14,11 @@ class WhatsAppMessageSkill(private val context: Context) : Skill {
     override val name = "WhatsApp Message"
     override val description = "Sends a message via WhatsApp"
     
-    override fun canHandle(intent: Intent) = intent == Intent("app.whatsapp.message")
+    override fun canHandle(intent: Intent) = intent == Intent.SEND_WHATSAPP
 
     override fun execute(request: SkillRequest): SkillResult {
-        val phone = request.command.arguments["phone"] ?: return SkillResult.Failure("Phone number required")
-        val message = request.command.arguments["message"] ?: request.command.message ?: ""
+        val phone = request.command.contactName ?: return SkillResult.Failure("Phone number required")
+        val message = request.command.message ?: ""
         
         val uri = Uri.parse("whatsapp://send?phone=$phone&text=${URLEncoder.encode(message, "UTF-8")}")
         val intent = AndroidIntent(AndroidIntent.ACTION_VIEW, uri).apply {
@@ -40,12 +40,12 @@ class WhatsAppCallSkill(private val context: Context) : Skill {
     override val name = "WhatsApp Call"
     override val description = "Initiates a WhatsApp voice call"
     
-    override fun canHandle(intent: Intent) = intent == Intent("app.whatsapp.call")
+    override fun canHandle(intent: Intent) = intent == Intent.OPEN_WHATSAPP_CALLS
 
     override fun execute(request: SkillRequest): SkillResult {
         // WhatsApp doesn't have a reliable public intent for calls without contacts lookup.
         // We will fallback to opening the app for now if phone is provided.
-        val phone = request.command.arguments["phone"]
+        val phone = request.command.contactName
         return if (phone != null) {
             val uri = Uri.parse("whatsapp://send?phone=$phone")
             val intent = AndroidIntent(AndroidIntent.ACTION_VIEW, uri).apply {
@@ -72,7 +72,7 @@ class YouTubeSearchSkill(private val context: Context) : Skill {
     override val name = "YouTube Search"
     override val description = "Searches YouTube"
     
-    override fun canHandle(intent: Intent) = intent == Intent("app.youtube.search")
+    override fun canHandle(intent: Intent) = intent == Intent.SEARCH_YOUTUBE
 
     override fun execute(request: SkillRequest): SkillResult {
         val query = request.command.query ?: request.command.message ?: return SkillResult.Failure("Query required")
@@ -101,10 +101,10 @@ class YouTubePlaySkill(private val context: Context) : Skill {
     override val name = "YouTube Play"
     override val description = "Plays a YouTube video"
     
-    override fun canHandle(intent: Intent) = intent == Intent("app.youtube.play")
+    override fun canHandle(intent: Intent) = intent == Intent.PLAY_VIDEO_URL
 
     override fun execute(request: SkillRequest): SkillResult {
-        val videoId = request.command.arguments["videoId"] ?: return SkillResult.Failure("Video ID required")
+        val videoId = request.command.url ?: return SkillResult.Failure("Video ID required")
         val intent = AndroidIntent(AndroidIntent.ACTION_VIEW, Uri.parse("vnd.youtube:$videoId")).apply {
             flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
         }

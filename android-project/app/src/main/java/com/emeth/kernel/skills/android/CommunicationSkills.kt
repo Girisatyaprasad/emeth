@@ -67,6 +67,11 @@ class WhatsAppSkill(private val context: Context) : Skill {
     override val description = "Opens WhatsApp"
 
     override fun canHandle(intent: Intent) = intent == Intent.OPEN_WHATSAPP ||
+        intent == Intent.OPEN_WHATSAPP_CHATS ||
+        intent == Intent.OPEN_WHATSAPP_UPDATES ||
+        intent == Intent.OPEN_WHATSAPP_COMMUNITIES ||
+        intent == Intent.OPEN_WHATSAPP_CALLS ||
+        intent == Intent.OPEN_WHATSAPP_SETTINGS ||
         intent == Intent.SEND_WHATSAPP ||
         intent == Intent.SEND_WHATSAPP_STATUS ||
         intent == Intent.MARK_WHATSAPP_READ ||
@@ -78,18 +83,66 @@ class WhatsAppSkill(private val context: Context) : Skill {
             Intent.SEND_WHATSAPP_STATUS -> sendStatus(request)
             Intent.MARK_WHATSAPP_READ -> unsupportedChatStateAction("mark WhatsApp chats as read")
             Intent.MUTE_WHATSAPP_CHAT -> unsupportedChatStateAction("list or mute WhatsApp chats")
+            Intent.OPEN_WHATSAPP_CHATS -> openSection("Chats")
+            Intent.OPEN_WHATSAPP_UPDATES -> openSection("Updates", "Status")
+            Intent.OPEN_WHATSAPP_COMMUNITIES -> openSection("Communities")
+            Intent.OPEN_WHATSAPP_CALLS -> openSection("Calls")
+            Intent.OPEN_WHATSAPP_SETTINGS -> openSection("Settings")
             else -> openWhatsApp()
         }
     }
 
     private fun openWhatsApp(): SkillResult {
-        var i = context.packageManager.getLaunchIntentForPackage("com.whatsapp")
-        if (i == null) {
-            i = AndroidIntent(AndroidIntent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=com.whatsapp"))
+        val launch = whatsappLaunchIntent()
+            ?: return SkillResult.Failure("WhatsApp is not installed or Android is blocking its launch activity.")
+        return try {
+            context.startActivity(launch)
+            SkillResult.Success("Opened WhatsApp.")
+        } catch (error: Exception) {
+            SkillResult.Failure("Android found WhatsApp but could not open it: ${error.message}", error)
         }
-        i.flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
-        context.startActivity(i)
-        return SkillResult.Success("Opened WhatsApp")
+    }
+
+    private fun openSection(primaryLabel: String, fallbackLabel: String? = null): SkillResult {
+        val launch = whatsappLaunchIntent()
+            ?: return SkillResult.Failure("WhatsApp is not installed or Android is blocking its launch activity.")
+        context.startActivity(launch)
+        Thread.sleep(900)
+        val tapped = com.emeth.kernel.access.EmethAccessibilityService.tapText(primaryLabel) ||
+            (fallbackLabel != null && com.emeth.kernel.access.EmethAccessibilityService.tapText(fallbackLabel))
+        return if (tapped) {
+            SkillResult.Success("Opened WhatsApp $primaryLabel.")
+        } else {
+            SkillResult.Partial(
+                "Opened WhatsApp. Enable Accessibility access so Emeth can select $primaryLabel inside WhatsApp."
+            )
+        }
+    }
+
+    private fun whatsappLaunchIntent(): AndroidIntent? {
+        val packageManager = context.packageManager
+        for (packageName in listOf("com.whatsapp", "com.whatsapp.w4b")) {
+            packageManager.getLaunchIntentForPackage(packageName)?.let {
+                return it.apply { flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK }
+            }
+            val uriIntent = AndroidIntent(AndroidIntent.ACTION_VIEW, Uri.parse("whatsapp://send")).apply {
+                setPackage(packageName)
+                flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+            }
+            if (uriIntent.resolveActivity(packageManager) != null) return uriIntent
+        }
+        return packageManager.queryIntentActivities(
+            AndroidIntent(AndroidIntent.ACTION_MAIN).addCategory(AndroidIntent.CATEGORY_LAUNCHER),
+            0
+        ).firstOrNull {
+            val label = it.loadLabel(packageManager).toString()
+            label.contains("whatsapp", ignoreCase = true)
+        }?.activityInfo?.let { info ->
+            AndroidIntent(AndroidIntent.ACTION_MAIN)
+                .addCategory(AndroidIntent.CATEGORY_LAUNCHER)
+                .setClassName(info.packageName, info.name)
+                .addFlags(AndroidIntent.FLAG_ACTIVITY_NEW_TASK)
+        }
     }
 
     private fun sendMessage(request: SkillRequest): SkillResult {
@@ -118,7 +171,7 @@ class WhatsAppSkill(private val context: Context) : Skill {
             AndroidIntent(AndroidIntent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(AndroidIntent.EXTRA_TEXT, message)
-                setPackage("com.whatsapp")
+                setPackage(installedWhatsAppPackage())
             }
         }.apply {
             flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
@@ -153,11 +206,17 @@ class WhatsAppSkill(private val context: Context) : Skill {
             clipData = ClipData.newUri(context.contentResolver, latestVideo.displayName, uri)
             addFlags(AndroidIntent.FLAG_GRANT_READ_URI_PERMISSION)
             flags = flags or AndroidIntent.FLAG_ACTIVITY_NEW_TASK
-            setPackage("com.whatsapp")
+            setPackage(installedWhatsAppPackage())
         }
 
         context.startActivity(intent)
         return SkillResult.Success("Prepared latest downloaded video for WhatsApp status.")
+    }
+
+    private fun installedWhatsAppPackage(): String {
+        return listOf("com.whatsapp", "com.whatsapp.w4b")
+            .firstOrNull { context.packageManager.getLaunchIntentForPackage(it) != null }
+            ?: "com.whatsapp"
     }
 
     private fun unsupportedChatStateAction(action: String): SkillResult {

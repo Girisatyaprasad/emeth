@@ -64,9 +64,8 @@ class ConditionEvaluator(private val context: Context) {
     }
 
     private fun evaluateSteps(condition: WatcherCondition): Boolean {
-        // Mocked or persistent reading would go here.
-        // For actual steps, we need TYPE_STEP_COUNTER sensor and background tracking.
-        return false // Requires permission ACTIVITY_RECOGNITION
+        val steps = com.emeth.kernel.health.StepCounterRepository.read(context) ?: return false
+        return evaluateOp(steps.toFloat(), condition)
     }
 
     private fun evaluateOp(current: Float, condition: WatcherCondition): Boolean {

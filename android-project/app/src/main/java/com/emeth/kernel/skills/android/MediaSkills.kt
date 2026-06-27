@@ -47,7 +47,6 @@ class YouTubeSkill(private val context: Context) : Skill {
     override fun execute(request: SkillRequest): SkillResult {
         if (request.command.intentType in listOf(
                 Intent.CREATE_SHORT, 
-                Intent.OPEN_YOUTUBE_SETTINGS,
                 Intent.YOUTUBE_LIKE_VIDEO,
                 Intent.YOUTUBE_SUBSCRIBE,
                 Intent.YOUTUBE_COMMENT
@@ -73,18 +72,17 @@ class YouTubeSkill(private val context: Context) : Skill {
                 i2.putExtra("query", "$q shorts")
                 i2
             }
-            Intent.OPEN_SHORTS,
-            Intent.OPEN_HISTORY,
-            Intent.OPEN_PLAYLISTS,
-            Intent.OPEN_SUBSCRIPTIONS,
-            Intent.OPEN_YOU_PAGE,
-            Intent.OPEN_YOUTUBE_TRENDING,
-            Intent.OPEN_YOUTUBE_GAMING,
-            Intent.OPEN_YOUTUBE_DOWNLOADS,
-            Intent.OPEN_YOUTUBE_NOTIFICATIONS,
-            Intent.OPEN_YOUTUBE_MOVIES -> {
-                return SkillResult.Failure("I can open YouTube, but this specific section is not available through Android deep links yet.")
-            }
+            Intent.OPEN_SHORTS -> webSection("https://www.youtube.com/shorts/", "Opening Shorts.")
+            Intent.OPEN_HISTORY -> webSection("https://www.youtube.com/feed/history", "Opening YouTube history.")
+            Intent.OPEN_PLAYLISTS -> webSection("https://www.youtube.com/feed/playlists", "Opening playlists.")
+            Intent.OPEN_SUBSCRIPTIONS -> webSection("https://www.youtube.com/feed/subscriptions", "Opening subscriptions.")
+            Intent.OPEN_YOU_PAGE -> webSection("https://www.youtube.com/feed/you", "Opening your YouTube page.")
+            Intent.OPEN_YOUTUBE_TRENDING -> webSection("https://www.youtube.com/feed/trending", "Opening trending.")
+            Intent.OPEN_YOUTUBE_GAMING -> webSection("https://www.youtube.com/gaming", "Opening YouTube Gaming.")
+            Intent.OPEN_YOUTUBE_MOVIES -> webSection("https://www.youtube.com/feed/storefront", "Opening YouTube Movies.")
+            Intent.OPEN_YOUTUBE_DOWNLOADS -> return openYouTubeSection("Downloads")
+            Intent.OPEN_YOUTUBE_NOTIFICATIONS -> return openYouTubeSection("Notifications")
+            Intent.OPEN_YOUTUBE_SETTINGS -> return openYouTubeSection("Settings")
             Intent.OPEN_WATCH_LATER -> {
                 humanMessage = "Opening Watch Later."
                 YouTubeDeepLinks.getWatchLaterIntent()
@@ -163,6 +161,28 @@ class YouTubeSkill(private val context: Context) : Skill {
                     SkillResult.Failure("Failed to execute YouTube action.", ex)
                 }
             }
+        }
+    }
+
+    private fun webSection(url: String, message: String): AndroidIntent {
+        return AndroidIntent(AndroidIntent.ACTION_VIEW, Uri.parse(url)).apply {
+            setPackage(YouTubeDeepLinks.PACKAGE_NAME)
+            putExtra("emeth_message", message)
+        }
+    }
+
+    private fun openYouTubeSection(label: String): SkillResult {
+        val launch = context.packageManager.getLaunchIntentForPackage(YouTubeDeepLinks.PACKAGE_NAME)
+            ?: return SkillResult.Failure("YouTube is not installed.")
+        launch.flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        context.startActivity(launch)
+        Thread.sleep(900)
+        return if (com.emeth.kernel.access.EmethAccessibilityService.tapText(label)) {
+            SkillResult.Success("Opened YouTube $label.")
+        } else {
+            SkillResult.Partial(
+                "Opened YouTube. Enable Accessibility access so Emeth can select $label inside YouTube."
+            )
         }
     }
 }

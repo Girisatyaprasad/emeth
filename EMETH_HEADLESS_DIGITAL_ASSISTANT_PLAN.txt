@@ -234,3 +234,14 @@ Reusable spine and interaction phase implemented
 - Added restrained haptic feedback for navigation, command submission, permission actions, and deletion.
 - Added smooth scrollable Home content, keyboard-safe spacing, and bottom content padding.
 - Kept glass effects focused on controls and navigation so content remains readable.
+
+Android 16 and major-app intent phase implemented
+- Added an Android 16 Settings catalog derived from API 36 Settings actions.
+- Settings commands now select exact pages including VPN, NFC, developer options, default apps, privacy, data usage, notification access, unknown sources, DND, accounts, biometrics, casting, and more.
+- Every settings launch checks device support and falls back to Settings home on OEMs that omit a standard page.
+- WhatsApp launch now resolves regular WhatsApp, WhatsApp Business, the whatsapp URI scheme, or an installed launcher activity.
+- Added WhatsApp Chats, Updates, Communities, Calls, and Settings navigation through app launch plus the shared accessibility UI map.
+- Added working YouTube web/deep-link routes for Shorts, History, Playlists, Subscriptions, You, Trending, Gaming, and Movies.
+- YouTube Downloads, Notifications, and Settings use app launch plus the shared accessibility UI map.
+- Replaced the fake step automation evaluator with a persistent shared step-counter repository.
+- Step commands and step automations now use the same retained sensor state.

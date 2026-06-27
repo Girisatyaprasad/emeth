@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.emeth.kernel.spine.EmethSpineBootstrap.initialize(this)
+        com.emeth.kernel.health.StepCounterRepository.start(this)
         
         val eventBus = EventBus()
         val registry = SkillRegistry()

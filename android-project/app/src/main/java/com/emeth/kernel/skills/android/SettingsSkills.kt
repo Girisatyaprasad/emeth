@@ -19,9 +19,7 @@ abstract class BaseSettingsSkill(
     override fun canHandle(intent: Intent) = intent == targetIntent
 
     override fun execute(request: SkillRequest): SkillResult {
-        val i = AndroidIntent(action).apply {
-            flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
-        }
+        val i = Android16SettingsIntentMap.resolve(context, request.command.rawText)
         context.startActivity(i)
         return SkillResult.Success("Opened $name")
     }
@@ -38,4 +36,15 @@ class SettingsBatterySkill(context: Context) : BaseSettingsSkill(context, "andro
 class SettingsStorageSkill(context: Context) : BaseSettingsSkill(context, "android.settings.storage", "Storage Settings", "Opens Storage settings", Intent.OPEN_SETTINGS_STORAGE, Settings.ACTION_INTERNAL_STORAGE_SETTINGS)
 class SettingsLocationSkill(context: Context) : BaseSettingsSkill(context, "android.settings.location", "Location Settings", "Opens Location settings", Intent.OPEN_SETTINGS_LOCATION, Settings.ACTION_LOCATION_SOURCE_SETTINGS)
 class SettingsDateTimeSkill(context: Context) : BaseSettingsSkill(context, "android.settings.date_time", "Date & Time Settings", "Opens Date & Time settings", Intent.OPEN_SETTINGS_DATE_TIME, Settings.ACTION_DATE_SETTINGS)
-class SettingsSkill(context: Context) : BaseSettingsSkill(context, "android.settings", "Settings", "Opens main Settings", Intent.OPEN_SETTINGS, Settings.ACTION_SETTINGS)
+class SettingsSkill(private val appContext: Context) : Skill {
+    override val id = "android.settings"
+    override val name = "Settings"
+    override val description = "Opens the best matching Android 16 Settings page"
+    override fun canHandle(intent: Intent) = intent == Intent.OPEN_SETTINGS
+
+    override fun execute(request: SkillRequest): SkillResult {
+        val target = Android16SettingsIntentMap.resolve(appContext, request.command.rawText)
+        appContext.startActivity(target)
+        return SkillResult.Success("Opened the matching Settings page.")
+    }
+}

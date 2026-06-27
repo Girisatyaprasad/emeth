@@ -130,6 +130,23 @@ object SemanticIntentMatcher {
         }
 
         // WhatsApp management through Android app intents only.
+        if (expandedText.contains("whatsapp") && expandedText.contains("settings")) {
+            score(Intent.OPEN_WHATSAPP_SETTINGS, 6.0f, "WhatsApp settings section")
+        }
+        if (expandedText.contains("whatsapp") && expandedText.contains("communit")) {
+            score(Intent.OPEN_WHATSAPP_COMMUNITIES, 6.0f, "WhatsApp communities section")
+        }
+        if (expandedText.contains("whatsapp") && expandedText.contains("update")) {
+            score(Intent.OPEN_WHATSAPP_UPDATES, 6.0f, "WhatsApp updates section")
+        }
+        if (expandedText.contains("whatsapp") && expandedText.contains("call")) {
+            score(Intent.OPEN_WHATSAPP_CALLS, 6.0f, "WhatsApp calls section")
+        }
+        if (expandedText.contains("whatsapp") && expandedText.contains("chat") &&
+            (expandedText.contains("open") || expandedText.contains("show"))
+        ) {
+            score(Intent.OPEN_WHATSAPP_CHATS, 6.0f, "WhatsApp chats section")
+        }
         if (expandedText.contains("whatsapp") && expandedText.contains("status") && expandedText.contains("video")) {
             score(Intent.SEND_WHATSAPP_STATUS, 5.0f, "WhatsApp status video phrase")
         }

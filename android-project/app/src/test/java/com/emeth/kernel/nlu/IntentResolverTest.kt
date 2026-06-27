@@ -196,6 +196,32 @@ class IntentResolverTest {
     }
 
     @Test
+    fun testCurrentWhatsAppSections() {
+        assertIntent("open whatsapp chats", Intent.OPEN_WHATSAPP_CHATS)
+        assertIntent("open whatsapp updates", Intent.OPEN_WHATSAPP_UPDATES)
+        assertIntent("open whatsapp communities", Intent.OPEN_WHATSAPP_COMMUNITIES)
+        assertIntent("open whatsapp calls", Intent.OPEN_WHATSAPP_CALLS)
+        assertIntent("open whatsapp settings", Intent.OPEN_WHATSAPP_SETTINGS)
+    }
+
+    @Test
+    fun testExtendedAndroid16SettingsPhrases() {
+        val commands = mapOf(
+            "open vpn settings" to Intent.OPEN_SETTINGS,
+            "open nfc settings" to Intent.OPEN_SETTINGS,
+            "open default apps settings" to Intent.OPEN_SETTINGS_APPS,
+            "open developer options settings" to Intent.OPEN_SETTINGS,
+            "open about phone settings" to Intent.OPEN_SETTINGS,
+            "open privacy settings" to Intent.OPEN_SETTINGS_SECURITY,
+            "open data usage settings" to Intent.OPEN_SETTINGS,
+            "open notification access settings" to Intent.OPEN_NOTIFICATION_ACCESS_SETUP,
+            "open install unknown apps settings" to Intent.OPEN_SETTINGS_APPS,
+            "open do not disturb settings" to Intent.OPEN_SETTINGS
+        )
+        commands.forEach { (command, expected) -> assertIntent(command, expected) }
+    }
+
+    @Test
     fun testWhatsNextGuidance() {
         assertIntent("what's next", Intent.WHAT_IS_NEXT)
         assertIntent("next step", Intent.WHAT_IS_NEXT)

@@ -245,3 +245,11 @@ Android 16 and major-app intent phase implemented
 - YouTube Downloads, Notifications, and Settings use app launch plus the shared accessibility UI map.
 - Replaced the fake step automation evaluator with a persistent shared step-counter repository.
 - Step commands and step automations now use the same retained sensor state.
+
+Runtime intent organism phase implemented
+- Added Android ACTION_CREATE_NOTE support with title and text extras.
+- Added fallback note sharing for older Android versions.
+- Added runtime reflection over public ACTION_* contracts from Intent, Settings, AlarmClock, and MediaStore.
+- Emeth asks PackageManager which installed activities actually handle each contract and MIME variant.
+- The resolved action/handler inventory is published to the Air OS spine as android.intent.catalog.
+- This catalog grows with Android and installed apps without invoking unknown private components.

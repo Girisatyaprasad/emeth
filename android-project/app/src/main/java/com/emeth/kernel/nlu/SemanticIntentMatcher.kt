@@ -264,6 +264,14 @@ object SemanticIntentMatcher {
         ) {
             score(Intent.OPEN_CALENDAR, 4.0f, "calendar launch phrase")
         }
+        if ((expandedText.startsWith("note ") ||
+                expandedText.startsWith("create note") ||
+                expandedText.startsWith("make a note") ||
+                expandedText.startsWith("write a note") ||
+                expandedText.startsWith("take a note"))
+        ) {
+            score(Intent.CREATE_NOTE, 5.0f, "Android create-note contract")
+        }
         if (expandedText == "back" || expandedText.contains("go back") || expandedText.contains("press back")) {
             score(Intent.PHONE_BACK, 5.0f, "phone back control phrase")
         }

@@ -11,6 +11,9 @@ import com.emeth.kernel.skills.SkillRegistry
 import com.emeth.kernel.skills.android.*
 import com.emeth.kernel.planner.Planner
 import com.emeth.kernel.ui.EmethScreen
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var planner: Planner
@@ -19,6 +22,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         com.emeth.kernel.spine.EmethSpineBootstrap.initialize(this)
         com.emeth.kernel.health.StepCounterRepository.start(this)
+        CoroutineScope(Dispatchers.IO).launch {
+            com.emeth.kernel.intents.IntentCapabilityScanner.scanAndPublish(this@MainActivity)
+        }
         
         val eventBus = EventBus()
         val registry = SkillRegistry()
@@ -69,6 +75,7 @@ class MainActivity : ComponentActivity() {
         // Productivity Skills
         registry.register(CalendarSkill(this))
         registry.register(AddCalendarEventSkill(this))
+        registry.register(NoteSkill(this))
         registry.register(AlarmSkill(this))
         registry.register(TimerSkill(this))
         registry.register(StopwatchSkill(this))

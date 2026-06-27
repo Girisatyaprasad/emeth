@@ -222,6 +222,16 @@ class IntentResolverTest {
     }
 
     @Test
+    fun testAndroidNoteContract() {
+        val note = resolver.resolve("create note buy milk and bread")
+        assertEquals(Intent.CREATE_NOTE, note.intentType)
+        assertTrue(note.confidence >= 0.75f)
+
+        assertIntent("take a note saying call mom", Intent.CREATE_NOTE)
+        assertIntent("note remember passport", Intent.CREATE_NOTE)
+    }
+
+    @Test
     fun testWhatsNextGuidance() {
         assertIntent("what's next", Intent.WHAT_IS_NEXT)
         assertIntent("next step", Intent.WHAT_IS_NEXT)

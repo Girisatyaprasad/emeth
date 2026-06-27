@@ -219,7 +219,7 @@ object EntityExtractor {
             return quoted.groupValues.drop(1).firstOrNull { it.isNotBlank() }?.trim()
         }
 
-        val markers = listOf("message", "saying", "say", "text")
+        val markers = listOf("message", "saying", "say", "text", "note")
         for (marker in markers) {
             val match = Regex("\\b$marker\\b\\s+(.+?)(?:\\s+to\\s+whatsapp|\\s+on\\s+whatsapp|$)").find(text)
             val value = match?.groupValues?.getOrNull(1)

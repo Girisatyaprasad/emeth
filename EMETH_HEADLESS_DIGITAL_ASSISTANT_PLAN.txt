@@ -223,7 +223,14 @@ Air OS shared spine phase implemented
 - Access is restricted to apps signed with the same Air OS signing certificate.
 
 Next required work
-- Extract the spine contract into a reusable Air OS Android library consumed by every app.
 - Add behavior subscriptions so one node can react to another node's events.
 - Add shared entity reconciliation for contacts, files, media, places, and conversations.
 - Add retention, encryption, export, and user-visible memory controls.
+
+Reusable spine and interaction phase implemented
+- Extracted the shared contract, IDs, and client API into the :air-os-spine Android library.
+- Emeth now consumes the same library future Air OS apps will consume.
+- Added translucent functional surfaces for command input and bottom navigation.
+- Added restrained haptic feedback for navigation, command submission, permission actions, and deletion.
+- Added smooth scrollable Home content, keyboard-safe spacing, and bottom content padding.
+- Kept glass effects focused on controls and navigation so content remains readable.

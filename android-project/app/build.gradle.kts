@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.emeth"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
     }
 
     buildTypes {
@@ -44,6 +44,7 @@ kotlin {
 }
 
 dependencies {
+  implementation(project(":air-os-spine"))
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
   androidTestImplementation(composeBom)

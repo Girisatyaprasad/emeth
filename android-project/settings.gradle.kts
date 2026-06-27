@@ -31,3 +31,4 @@ plugins {
 
 rootProject.name = "Emeth"
 include(":app")
+include(":air-os-spine")

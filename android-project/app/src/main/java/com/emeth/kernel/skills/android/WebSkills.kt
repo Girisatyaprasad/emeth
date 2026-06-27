@@ -32,3 +32,40 @@ class WebSearchSkill(private val context: Context) : Skill {
         return SkillResult.Success("Searching for $query.")
     }
 }
+
+class OpenBrowserSkill(private val context: Context) : Skill {
+    override val id = "android.web.browser"
+    override val name = "Open Browser"
+    override val description = "Opens the web browser"
+    override fun canHandle(intent: Intent) = intent == Intent.OPEN_BROWSER
+    override fun execute(request: SkillRequest): SkillResult {
+        val i = AndroidIntent(AndroidIntent.ACTION_MAIN).apply {
+            addCategory(AndroidIntent.CATEGORY_APP_BROWSER)
+            flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        }
+        if (i.resolveActivity(context.packageManager) == null) {
+            val fallback = AndroidIntent(AndroidIntent.ACTION_VIEW, android.net.Uri.parse("https://google.com")).apply {
+                flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(fallback)
+        } else {
+            context.startActivity(i)
+        }
+        return SkillResult.Success("Opened browser.")
+    }
+}
+
+class CheckWeatherSkill(private val context: Context) : Skill {
+    override val id = "android.web.weather"
+    override val name = "Check Weather"
+    override val description = "Checks the weather via web search"
+    override fun canHandle(intent: Intent) = intent == Intent.CHECK_WEATHER
+    override fun execute(request: SkillRequest): SkillResult {
+        val i = AndroidIntent(AndroidIntent.ACTION_WEB_SEARCH).apply {
+            putExtra(SearchManager.QUERY, "weather")
+            flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(i)
+        return SkillResult.Success("Opened weather.")
+    }
+}

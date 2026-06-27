@@ -290,36 +290,72 @@ private object ContactPhoneResolver {
             ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER,
             ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY
         )
-        val filterUri = ContactsContract.CommonDataKinds.Phone.CONTENT_FILTER_URI
-            .buildUpon()
-            .appendPath(Uri.encode(name))
-            .build()
         val wanted = normalizeName(name)
         var bestNumber: String? = null
         var bestScore = -1
-        context.contentResolver.query(
-            filterUri,
-            projection,
-            null,
-            null,
-            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} ASC"
-        )?.use { cursor ->
-            while (cursor.moveToNext()) {
-                val displayName = cursor.getString(2).orEmpty()
-                val candidate = cursor.getString(1) ?: cursor.getString(0) ?: continue
-                val normalizedDisplay = normalizeName(displayName)
-                val score = when {
-                    normalizedDisplay == wanted -> 100
-                    normalizedDisplay.startsWith(wanted) -> 80
-                    normalizedDisplay.contains(wanted) -> 60
-                    else -> 20
-                }
-                if (score > bestScore) {
-                    bestScore = score
-                    bestNumber = candidate.filter { it.isDigit() || it == '+' }
+
+        // Strategy 1: SQL LIKE match
+        val selection = "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} LIKE ?"
+        val args = arrayOf("%$name%")
+        try {
+            context.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                projection,
+                selection,
+                args,
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} ASC"
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val displayName = cursor.getString(2).orEmpty()
+                    val candidate = cursor.getString(1) ?: cursor.getString(0) ?: continue
+                    val normalizedDisplay = normalizeName(displayName)
+                    val score = when {
+                        normalizedDisplay == wanted -> 100
+                        normalizedDisplay.startsWith(wanted) -> 80
+                        normalizedDisplay.contains(wanted) -> 60
+                        else -> 20
+                    }
+                    if (score > bestScore) {
+                        bestScore = score
+                        bestNumber = candidate.filter { it.isDigit() || it == '+' }
+                    }
                 }
             }
+        } catch (e: Exception) {
+            // Ignore
         }
+
+        // Strategy 2: Fallback scan across all contacts if Strategy 1 fails
+        if (bestNumber == null) {
+            try {
+                context.contentResolver.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    projection,
+                    null,
+                    null,
+                    null
+                )?.use { cursor ->
+                    while (cursor.moveToNext()) {
+                        val displayName = cursor.getString(2).orEmpty()
+                        val candidate = cursor.getString(1) ?: cursor.getString(0) ?: continue
+                        val normalizedDisplay = normalizeName(displayName)
+                        val score = when {
+                            normalizedDisplay == wanted -> 100
+                            normalizedDisplay.startsWith(wanted) -> 80
+                            normalizedDisplay.contains(wanted) -> 60
+                            else -> -1
+                        }
+                        if (score > bestScore) {
+                            bestScore = score
+                            bestNumber = candidate.filter { it.isDigit() || it == '+' }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+
         return bestNumber
     }
 

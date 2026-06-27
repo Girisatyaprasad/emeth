@@ -168,6 +168,13 @@ object SemanticIntentMatcher {
             score(Intent.SEND_WHATSAPP, 5.0f, "explicit message and recipient defaults to WhatsApp")
         }
 
+        // --- Third-Party App Intents ---
+        val socialAndProductivityApps = listOf("instagram", "insta", "facebook", "fb", "twitter", "tweet", "telegram", "tg", "map", "maps", "navigation", "gmail", "email", "mail", "play store", "app store", "market", "clock", "spotify", "netflix")
+        val appPattern = Regex("\\b(?:${socialAndProductivityApps.joinToString("|")})\\b")
+        if (appPattern.containsMatchIn(expandedText)) {
+            score(Intent.OPEN_THIRD_PARTY_ACTION, 4.0f, "Matched an alias in AppDeepLinkMap")
+        }
+
         // --- Medium Priority (Specific Actions) ---
         if (expandedText.contains("youtube") &&
             (expandedText.contains("open") || expandedText.contains("launch") ||
@@ -214,6 +221,45 @@ object SemanticIntentMatcher {
         ) {
             score(Intent.OPEN_SETTINGS_DATE_TIME, 6.0f, "date/time settings phrase")
         }
+        if (expandedText.contains("settings") && (expandedText.contains("network") || expandedText.contains("internet") || expandedText.contains("mobile"))) {
+            score(Intent.OPEN_SETTINGS_NETWORK, 6.0f, "network settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("nfc")) {
+            score(Intent.OPEN_SETTINGS_NFC, 6.0f, "NFC settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("cast")) {
+            score(Intent.OPEN_SETTINGS_CAST, 6.0f, "cast settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("hotspot")) {
+            score(Intent.OPEN_SETTINGS_HOTSPOT, 6.0f, "hotspot settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("airplane")) {
+            score(Intent.OPEN_SETTINGS_AIRPLANE_MODE, 6.0f, "airplane mode settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("vpn")) {
+            score(Intent.OPEN_SETTINGS_VPN, 6.0f, "VPN settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("roaming")) {
+            score(Intent.OPEN_SETTINGS_DATA_ROAMING, 6.0f, "data roaming settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("privacy")) {
+            score(Intent.OPEN_SETTINGS_PRIVACY, 6.0f, "privacy settings phrase")
+        }
+        if (expandedText.contains("settings") && (expandedText.contains("biometric") || expandedText.contains("fingerprint") || expandedText.contains("face"))) {
+            score(Intent.OPEN_SETTINGS_BIOMETRIC, 6.0f, "biometric settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("developer")) {
+            score(Intent.OPEN_SETTINGS_DEVELOPER, 6.0f, "developer settings phrase")
+        }
+        if (expandedText.contains("settings") && (expandedText.contains("about") || expandedText.contains("phone info"))) {
+            score(Intent.OPEN_SETTINGS_ABOUT, 6.0f, "about settings phrase")
+        }
+        if (expandedText.contains("settings") && (expandedText.contains("account") || expandedText.contains("google"))) {
+            score(Intent.OPEN_SETTINGS_ACCOUNT, 6.0f, "account settings phrase")
+        }
+        if (expandedText.contains("settings") && (expandedText.contains("notification") || expandedText.contains("alerts"))) {
+            score(Intent.OPEN_SETTINGS_NOTIFICATIONS, 6.0f, "notifications settings phrase")
+        }
         if (expandedText.contains("canonical_settings") || expandedText.contains("settings")) {
             score(Intent.OPEN_SETTINGS, 4.0f, "settings keyword")
         }
@@ -228,6 +274,33 @@ object SemanticIntentMatcher {
         }
         if (expandedText.contains("flashlight") || expandedText.contains("torch")) {
             score(Intent.TOGGLE_FLASHLIGHT, 4.5f, "flashlight control phrase")
+        }
+        if (expandedText.contains("wifi") || expandedText.contains("wi-fi")) {
+            if (expandedText.contains("turn on") || expandedText.contains("turn off") || expandedText.contains("toggle") || expandedText.contains("enable") || expandedText.contains("disable")) {
+                score(Intent.TOGGLE_WIFI, 5.0f, "wifi toggle phrase")
+            } else {
+                score(Intent.OPEN_SETTINGS_WIFI, 3.5f, "wifi settings fallback")
+            }
+        }
+        if (expandedText.contains("bluetooth")) {
+            if (expandedText.contains("turn on") || expandedText.contains("turn off") || expandedText.contains("toggle") || expandedText.contains("enable") || expandedText.contains("disable")) {
+                score(Intent.TOGGLE_BLUETOOTH, 5.0f, "bluetooth toggle phrase")
+            } else {
+                score(Intent.OPEN_SETTINGS_BLUETOOTH, 3.5f, "bluetooth settings fallback")
+            }
+        }
+        if (expandedText.contains("hotspot") || expandedText.contains("tethering")) {
+            if (expandedText.contains("turn on") || expandedText.contains("turn off") || expandedText.contains("toggle") || expandedText.contains("enable") || expandedText.contains("disable")) {
+                score(Intent.TOGGLE_HOTSPOT, 5.0f, "hotspot toggle phrase")
+            } else {
+                score(Intent.OPEN_SETTINGS_HOTSPOT, 3.5f, "hotspot settings fallback")
+            }
+        }
+        if (expandedText.contains("copy ") || expandedText.contains("clipboard")) {
+            score(Intent.SET_CLIPBOARD, 4.0f, "clipboard set phrase")
+        }
+        if (expandedText.contains("weather") || expandedText.contains("temperature") || expandedText.contains("forecast") || expandedText.contains("rain") || expandedText.contains("sunny")) {
+            score(Intent.CHECK_WEATHER, 4.5f, "weather inquiry phrase")
         }
         if (expandedText.contains("mute") && !expandedText.contains("whatsapp") &&
             !expandedText.contains("chat") && !expandedText.contains("group")

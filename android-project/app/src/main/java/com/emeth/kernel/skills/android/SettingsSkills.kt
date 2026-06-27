@@ -36,6 +36,19 @@ class SettingsBatterySkill(context: Context) : BaseSettingsSkill(context, "andro
 class SettingsStorageSkill(context: Context) : BaseSettingsSkill(context, "android.settings.storage", "Storage Settings", "Opens Storage settings", Intent.OPEN_SETTINGS_STORAGE, Settings.ACTION_INTERNAL_STORAGE_SETTINGS)
 class SettingsLocationSkill(context: Context) : BaseSettingsSkill(context, "android.settings.location", "Location Settings", "Opens Location settings", Intent.OPEN_SETTINGS_LOCATION, Settings.ACTION_LOCATION_SOURCE_SETTINGS)
 class SettingsDateTimeSkill(context: Context) : BaseSettingsSkill(context, "android.settings.date_time", "Date & Time Settings", "Opens Date & Time settings", Intent.OPEN_SETTINGS_DATE_TIME, Settings.ACTION_DATE_SETTINGS)
+class SettingsNetworkSkill(context: Context) : BaseSettingsSkill(context, "android.settings.network", "Network Settings", "Opens Network settings", Intent.OPEN_SETTINGS_NETWORK, Settings.ACTION_WIRELESS_SETTINGS)
+class SettingsNfcSkill(context: Context) : BaseSettingsSkill(context, "android.settings.nfc", "NFC Settings", "Opens NFC settings", Intent.OPEN_SETTINGS_NFC, Settings.ACTION_NFC_SETTINGS)
+class SettingsCastSkill(context: Context) : BaseSettingsSkill(context, "android.settings.cast", "Cast Settings", "Opens Cast settings", Intent.OPEN_SETTINGS_CAST, Settings.ACTION_CAST_SETTINGS)
+class SettingsHotspotSkill(context: Context) : BaseSettingsSkill(context, "android.settings.hotspot", "Hotspot Settings", "Opens Hotspot settings", Intent.OPEN_SETTINGS_HOTSPOT, "android.settings.TETHER_SETTINGS")
+class SettingsAirplaneModeSkill(context: Context) : BaseSettingsSkill(context, "android.settings.airplane_mode", "Airplane Mode Settings", "Opens Airplane Mode settings", Intent.OPEN_SETTINGS_AIRPLANE_MODE, Settings.ACTION_AIRPLANE_MODE_SETTINGS)
+class SettingsVpnSkill(context: Context) : BaseSettingsSkill(context, "android.settings.vpn", "VPN Settings", "Opens VPN settings", Intent.OPEN_SETTINGS_VPN, Settings.ACTION_VPN_SETTINGS)
+class SettingsDataRoamingSkill(context: Context) : BaseSettingsSkill(context, "android.settings.data_roaming", "Data Roaming Settings", "Opens Data Roaming settings", Intent.OPEN_SETTINGS_DATA_ROAMING, Settings.ACTION_DATA_ROAMING_SETTINGS)
+class SettingsPrivacySkill(context: Context) : BaseSettingsSkill(context, "android.settings.privacy", "Privacy Settings", "Opens Privacy settings", Intent.OPEN_SETTINGS_PRIVACY, Settings.ACTION_PRIVACY_SETTINGS)
+class SettingsBiometricSkill(context: Context) : BaseSettingsSkill(context, "android.settings.biometric", "Biometric Settings", "Opens Biometric settings", Intent.OPEN_SETTINGS_BIOMETRIC, Settings.ACTION_BIOMETRIC_ENROLL)
+class SettingsDeveloperSkill(context: Context) : BaseSettingsSkill(context, "android.settings.developer", "Developer Settings", "Opens Developer settings", Intent.OPEN_SETTINGS_DEVELOPER, Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+class SettingsAboutSkill(context: Context) : BaseSettingsSkill(context, "android.settings.about", "About Phone Settings", "Opens About Phone settings", Intent.OPEN_SETTINGS_ABOUT, Settings.ACTION_DEVICE_INFO_SETTINGS)
+class SettingsAccountSkill(context: Context) : BaseSettingsSkill(context, "android.settings.account", "Account Settings", "Opens Account settings", Intent.OPEN_SETTINGS_ACCOUNT, Settings.ACTION_SYNC_SETTINGS)
+class SettingsNotificationsSkill(context: Context) : BaseSettingsSkill(context, "android.settings.notifications", "Notifications Settings", "Opens Notifications settings", Intent.OPEN_SETTINGS_NOTIFICATIONS, "android.settings.ALL_APPS_NOTIFICATION_SETTINGS")
 class SettingsSkill(private val appContext: Context) : Skill {
     override val id = "android.settings"
     override val name = "Settings"

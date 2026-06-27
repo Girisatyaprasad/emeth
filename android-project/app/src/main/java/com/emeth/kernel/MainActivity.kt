@@ -60,6 +60,10 @@ class MainActivity : ComponentActivity() {
         registry.register(MuteSkill(this))
         registry.register(BrightnessSkill(this))
         registry.register(ReadClipboardSkill(this))
+        registry.register(SetClipboardSkill(this))
+        registry.register(ToggleWifiSkill(this))
+        registry.register(ToggleBluetoothSkill(this))
+        registry.register(ToggleHotspotSkill(this))
         registry.register(StorageSkill(this))
         registry.register(RamSkill(this))
         registry.register(BatterySkill(this))
@@ -83,6 +87,8 @@ class MainActivity : ComponentActivity() {
         
         // Web Skills
         registry.register(WebSearchSkill(this))
+        registry.register(OpenBrowserSkill(this))
+        registry.register(CheckWeatherSkill(this))
         
         // Settings Skills
         registry.register(SettingsSkill(this))
@@ -97,7 +103,23 @@ class MainActivity : ComponentActivity() {
         registry.register(SettingsStorageSkill(this))
         registry.register(SettingsLocationSkill(this))
         registry.register(SettingsDateTimeSkill(this))
+        registry.register(SettingsNetworkSkill(this))
+        registry.register(SettingsNfcSkill(this))
+        registry.register(SettingsCastSkill(this))
+        registry.register(SettingsHotspotSkill(this))
+        registry.register(SettingsAirplaneModeSkill(this))
+        registry.register(SettingsVpnSkill(this))
+        registry.register(SettingsDataRoamingSkill(this))
+        registry.register(SettingsPrivacySkill(this))
+        registry.register(SettingsBiometricSkill(this))
+        registry.register(SettingsDeveloperSkill(this))
+        registry.register(SettingsAboutSkill(this))
+        registry.register(SettingsAccountSkill(this))
+        registry.register(SettingsNotificationsSkill(this))
         
+        // Third-Party App Skills
+        registry.register(ThirdPartyAppSkill(this))
+
         // Memory Skill
         registry.register(com.emeth.kernel.skills.memory.MemorySkill(this))
 

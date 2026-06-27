@@ -14,9 +14,10 @@ import java.util.concurrent.TimeUnit
 
 object StepCounterRepository : SensorEventListener {
     private const val PREFS = "air_os_steps"
-    private const val RAW = "raw"
-    private const val BASELINE = "baseline"
+    private const val RAW = "raw" // the last raw value seen
+    private const val STEPS_TODAY = "steps_today"
     private const val DATE = "date"
+    private const val BASELINE = "baseline" // kept for migration
 
     @Volatile
     private var appContext: Context? = null
@@ -33,7 +34,6 @@ object StepCounterRepository : SensorEventListener {
     fun read(context: Context, timeoutSeconds: Long = 2): Int? {
         val safeContext = context.applicationContext
         if (!hasPermission(safeContext)) return null
-        current(safeContext)?.let { return it }
 
         val manager = safeContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val sensor = manager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) ?: return null
@@ -63,21 +63,62 @@ object StepCounterRepository : SensorEventListener {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val today = LocalDate.now().toString()
         val storedDate = prefs.getString(DATE, null)
-        val baseline = when {
-            storedDate == today -> prefs.getFloat(BASELINE, 0f)
-            storedDate == null -> 0f
-            else -> rawValue
+        
+        var lastRaw = prefs.getFloat(RAW, rawValue)
+        var stepsToday = if (prefs.contains(STEPS_TODAY)) {
+            prefs.getFloat(STEPS_TODAY, 0f)
+        } else {
+            // Migration
+            val oldBaseline = prefs.getFloat(BASELINE, 0f)
+            (lastRaw - oldBaseline).coerceAtLeast(0f)
         }
+
+        if (storedDate != today && storedDate != null) {
+            // New day
+            if (rawValue >= lastRaw) {
+                // Approximate missed steps to today
+                stepsToday = rawValue - lastRaw
+            } else {
+                // Reboot overnight
+                stepsToday = rawValue
+            }
+        } else if (storedDate == null) {
+            // First run ever
+            stepsToday = 0f
+        } else {
+            // Same day
+            if (rawValue < lastRaw) {
+                // Reboot during the day
+                stepsToday += rawValue
+            } else {
+                // Normal accumulation
+                stepsToday += (rawValue - lastRaw)
+            }
+        }
+
         prefs.edit()
             .putString(DATE, today)
-            .putFloat(BASELINE, baseline)
             .putFloat(RAW, rawValue)
+            .putFloat(STEPS_TODAY, stepsToday)
             .apply()
     }
 
     private fun current(context: Context): Int? {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         if (!prefs.contains(RAW)) return null
+        
+        val today = LocalDate.now().toString()
+        val storedDate = prefs.getString(DATE, null)
+        
+        if (storedDate != null && storedDate != today) {
+            // New day, sensor hasn't fired yet
+            return 0
+        }
+        
+        if (prefs.contains(STEPS_TODAY)) {
+            return prefs.getFloat(STEPS_TODAY, 0f).toInt()
+        }
+        
         val raw = prefs.getFloat(RAW, 0f)
         val baseline = prefs.getFloat(BASELINE, 0f)
         return (raw - baseline).toInt().coerceAtLeast(0)

@@ -63,12 +63,13 @@ class MuteSkill(private val context: Context) : Skill {
     override fun canHandle(intent: Intent) = intent == Intent.MUTE_VOLUME
 
     override fun execute(request: SkillRequest): SkillResult {
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
-        return SkillResult.Success("Muted volume")
+        val storageManager = context.getSystemService(Context.STORAGE_SERVICE) as android.os.storage.StorageManager
+        val intent = storageManager.primaryStorageVolume.createOpenDocumentTreeIntent()
+        intent.addFlags(AndroidIntent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        return SkillResult.Success("Opened file picker to explore storage")
     }
 }
-
 class BrightnessSkill(private val context: Context) : Skill {
     override val id = "android.system.brightness"
     override val name = "Set Brightness"
@@ -161,5 +162,61 @@ class RamSkill(private val context: Context) : Skill {
             index++
         }
         return String.format("%.2f %s", s, suffix[index])
+    }
+}
+
+class ToggleWifiSkill(private val context: Context) : Skill {
+    override val id = "android.system.wifi"
+    override val name = "Toggle WiFi"
+    override val description = "Opens the WiFi toggle panel"
+    override fun canHandle(intent: Intent) = intent == Intent.TOGGLE_WIFI
+    override fun execute(request: SkillRequest): SkillResult {
+        val i = AndroidIntent(if (android.os.Build.VERSION.SDK_INT >= 29) Settings.Panel.ACTION_WIFI else Settings.ACTION_WIFI_SETTINGS).apply {
+            flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(i)
+        return SkillResult.Success("Opened WiFi panel.")
+    }
+}
+
+class ToggleBluetoothSkill(private val context: Context) : Skill {
+    override val id = "android.system.bluetooth"
+    override val name = "Toggle Bluetooth"
+    override val description = "Opens the Bluetooth toggle panel"
+    override fun canHandle(intent: Intent) = intent == Intent.TOGGLE_BLUETOOTH
+    override fun execute(request: SkillRequest): SkillResult {
+        val i = AndroidIntent(Settings.ACTION_BLUETOOTH_SETTINGS).apply {
+            flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(i)
+        return SkillResult.Success("Opened Bluetooth settings.")
+    }
+}
+
+class ToggleHotspotSkill(private val context: Context) : Skill {
+    override val id = "android.system.hotspot"
+    override val name = "Toggle Hotspot"
+    override val description = "Opens the Hotspot settings"
+    override fun canHandle(intent: Intent) = intent == Intent.TOGGLE_HOTSPOT
+    override fun execute(request: SkillRequest): SkillResult {
+        val i = AndroidIntent("android.settings.TETHER_SETTINGS").apply {
+            flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(i)
+        return SkillResult.Success("Opened Hotspot settings.")
+    }
+}
+
+class SetClipboardSkill(private val context: Context) : Skill {
+    override val id = "android.system.setclipboard"
+    override val name = "Set Clipboard"
+    override val description = "Copies text to clipboard"
+    override fun canHandle(intent: Intent) = intent == Intent.SET_CLIPBOARD
+    override fun execute(request: SkillRequest): SkillResult {
+        val text = request.command.query ?: request.command.message ?: request.command.rawText.replace(Regex("(?i)^(copy|set clipboard to)\\s*"), "")
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("Copied Text", text)
+        clipboard.setPrimaryClip(clip)
+        return SkillResult.Success("Copied to clipboard.")
     }
 }

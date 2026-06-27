@@ -11,6 +11,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.unit.dp
 import com.emeth.kernel.planner.Planner
 import com.emeth.kernel.skills.SkillResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -18,6 +21,8 @@ fun HomeScreen(planner: Planner) {
     var inputText by remember { mutableStateOf("") }
     var actionResult by remember { mutableStateOf<String?>(null) }
     var showDebug by remember { mutableStateOf(false) }
+    var isRunning by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -52,25 +57,28 @@ fun HomeScreen(planner: Planner) {
         if (inputText.isNotBlank()) {
             Button(
                 onClick = {
-                    val result = planner.process(inputText)
-                    actionResult = if (result != null) {
-                        when (result) {
-                            is SkillResult.Success -> {
-                                result.message ?: "Done."
-                            }
-                            is SkillResult.Failure -> {
-                                result.reason.ifBlank { "I couldn't do that." }
-                            }
-                            is SkillResult.Partial -> result.message
-                        }
-                    } else {
-                        "No skill is registered for that command."
-                    }
+                    val command = inputText
                     inputText = ""
+                    isRunning = true
+                    scope.launch {
+                        val result = withContext(Dispatchers.Default) {
+                            planner.process(command)
+                        }
+                        actionResult = result.toDisplayMessage()
+                        isRunning = false
+                    }
                 },
-                modifier = Modifier.align(Alignment.End)
+                modifier = Modifier.align(Alignment.End),
+                enabled = !isRunning
             ) {
-                Text("Go")
+                if (isRunning) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Go")
+                }
             }
         }
 
@@ -91,4 +99,11 @@ fun HomeScreen(planner: Planner) {
             }
         }
     }
+}
+
+private fun SkillResult?.toDisplayMessage(): String = when (this) {
+    is SkillResult.Success -> message ?: "Done."
+    is SkillResult.Failure -> reason.ifBlank { "I couldn't do that." }
+    is SkillResult.Partial -> message
+    null -> "No skill is registered for that command."
 }

@@ -88,13 +88,21 @@ class TimerSkill(private val context: Context) : Skill {
     override fun canHandle(intent: Intent) = intent == Intent.SET_TIMER
 
     override fun execute(request: SkillRequest): SkillResult {
+        val duration = request.command.durationSeconds
+            ?: return SkillResult.Partial("How long should the timer run?")
         val i = AndroidIntent(AlarmClock.ACTION_SET_TIMER).apply {
-            putExtra(AlarmClock.EXTRA_LENGTH, 300) // 5 minutes default
+            putExtra(AlarmClock.EXTRA_LENGTH, duration)
             putExtra(AlarmClock.EXTRA_SKIP_UI, false)
             flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
         }
         context.startActivity(i)
-        return SkillResult.Success("Set Timer")
+        return SkillResult.Success("Set timer for ${formatDuration(duration)}.")
+    }
+
+    private fun formatDuration(seconds: Int): String = when {
+        seconds % 3600 == 0 -> "${seconds / 3600} hour${if (seconds == 3600) "" else "s"}"
+        seconds % 60 == 0 -> "${seconds / 60} minute${if (seconds == 60) "" else "s"}"
+        else -> "$seconds second${if (seconds == 1) "" else "s"}"
     }
 }
 

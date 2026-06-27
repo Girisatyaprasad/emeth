@@ -8,6 +8,9 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.provider.ContactsContract
+import androidx.core.content.ContextCompat
+import android.Manifest
+import android.content.pm.PackageManager
 import com.emeth.kernel.intents.Intent
 import com.emeth.kernel.skills.Skill
 import com.emeth.kernel.skills.SkillRequest
@@ -21,11 +24,17 @@ class CallContactSkill(private val context: Context) : Skill {
     override fun canHandle(intent: Intent) = intent == Intent.CALL_CONTACT
 
     override fun execute(request: SkillRequest): SkillResult {
+        val contact = request.command.contactName
+        val number = contact?.let { ContactPhoneResolver.find(context, it) }
+        if (contact != null && number == null) {
+            return ContactPhoneResolver.failure(context, contact)
+        }
         val i = AndroidIntent(AndroidIntent.ACTION_DIAL).apply {
+            if (number != null) data = Uri.parse("tel:${Uri.encode(number)}")
             flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
         }
         context.startActivity(i)
-        return SkillResult.Success("Opened Dialer")
+        return SkillResult.Success(if (contact == null) "Opened dialer." else "Opened dialer for $contact.")
     }
 }
 
@@ -37,12 +46,18 @@ class SmsContactSkill(private val context: Context) : Skill {
     override fun canHandle(intent: Intent) = intent == Intent.SMS_CONTACT
 
     override fun execute(request: SkillRequest): SkillResult {
+        val contact = request.command.contactName
+        val number = contact?.let { ContactPhoneResolver.find(context, it) }
+        if (contact != null && number == null) {
+            return ContactPhoneResolver.failure(context, contact)
+        }
         val i = AndroidIntent(AndroidIntent.ACTION_VIEW).apply {
-            data = Uri.parse("sms:")
+            data = Uri.parse("sms:${number.orEmpty()}")
+            request.command.message?.let { putExtra("sms_body", it) }
             flags = AndroidIntent.FLAG_ACTIVITY_NEW_TASK
         }
         context.startActivity(i)
-        return SkillResult.Success("Opened SMS")
+        return SkillResult.Success(if (contact == null) "Opened SMS." else "Prepared SMS to $contact.")
     }
 }
 
@@ -91,7 +106,12 @@ class WhatsAppSkill(private val context: Context) : Skill {
             return SkillResult.Partial("What message should I send on WhatsApp?")
         }
 
-        val phone = Regex("\\+?[0-9][0-9\\s-]{7,}").find(rawText)?.value?.filter { it.isDigit() }
+        val typedPhone = Regex("\\+?[0-9][0-9\\s-]{7,}").find(rawText)?.value?.filter { it.isDigit() }
+        val contact = request.command.contactName
+        val phone = typedPhone ?: contact?.let { ContactPhoneResolver.find(context, it) }
+        if (contact != null && phone == null) {
+            return ContactPhoneResolver.failure(context, contact)
+        }
         val intent = if (!phone.isNullOrBlank()) {
             AndroidIntent(AndroidIntent.ACTION_VIEW, Uri.parse("https://wa.me/$phone?text=${Uri.encode(message)}"))
         } else {
@@ -190,6 +210,38 @@ class WhatsAppSkill(private val context: Context) : Skill {
     private fun extractMessageBeforeRecipient(rawText: String): String? {
         val match = Regex("(?:send|text|message)\\s+(.+?)\\s+to\\s+").find(rawText)
         return match?.groupValues?.getOrNull(1)?.trim()
+    }
+}
+
+private object ContactPhoneResolver {
+    fun find(context: Context, name: String): String? {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            return null
+        }
+        val projection = arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER)
+        val selection = "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} LIKE ?"
+        val args = arrayOf("%$name%")
+        context.contentResolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            projection,
+            selection,
+            args,
+            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} ASC"
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                return cursor.getString(0)?.filter { it.isDigit() || it == '+' }
+            }
+        }
+        return null
+    }
+
+    fun failure(context: Context, name: String): SkillResult {
+        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
+        return if (granted) {
+            SkillResult.Failure("I couldn't find a phone number for $name.")
+        } else {
+            SkillResult.Failure("Contacts permission is required. Open the Access tab and allow Contacts.")
+        }
     }
 }
 

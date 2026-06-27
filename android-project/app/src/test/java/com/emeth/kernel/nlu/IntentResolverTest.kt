@@ -319,4 +319,17 @@ class IntentResolverTest {
         assertEquals(Intent.SEND_WHATSAPP, whatsapp.intentType)
         assertEquals("satya", whatsapp.contactName)
     }
+
+    @Test
+    fun testTimerDurationExtraction() {
+        val minutes = resolver.resolve("set a timer for 12 minutes")
+        assertEquals(Intent.SET_TIMER, minutes.intentType)
+        assertEquals(720, minutes.durationSeconds)
+
+        val seconds = resolver.resolve("timer for 30 seconds")
+        assertEquals(30, seconds.durationSeconds)
+
+        val hours = resolver.resolve("set timer for 2 hours")
+        assertEquals(7200, hours.durationSeconds)
+    }
 }

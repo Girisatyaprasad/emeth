@@ -172,6 +172,7 @@ class IntentResolver {
             recipeName = entities.recipeName,
             timeHour = entities.timeHour,
             timeMinute = entities.timeMinute,
+            durationSeconds = entities.durationSeconds,
             repeatDays = entities.repeatDays,
             url = entities.url,
             thresholdValue = entities.thresholdValue,

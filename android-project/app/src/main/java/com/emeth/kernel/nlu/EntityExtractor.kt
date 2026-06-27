@@ -5,6 +5,7 @@ import java.util.Calendar
 data class ExtractedEntities(
     val timeHour: Int? = null,
     val timeMinute: Int? = null,
+    val durationSeconds: Int? = null,
     val repeatDays: List<Int>? = null,
     val query: String? = null,
     val message: String? = null,
@@ -25,6 +26,7 @@ object EntityExtractor {
     fun extract(expandedText: String): ExtractedEntities {
         var timeHour: Int? = null
         var timeMinute: Int? = null
+        var durationSeconds: Int? = null
         var repeatDays: List<Int>? = null
         var query: String? = null
         var message: String? = null
@@ -60,6 +62,21 @@ object EntityExtractor {
                 if (ampm == "pm" && h < 12) timeHour = h + 12
                 if (ampm == "am" && h == 12) timeHour = 0
                 timeMinute = m
+            }
+        }
+
+        if (expandedText.contains("timer")) {
+            val durationMatch = Regex("\\b([0-9]+)\\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\\b").find(expandedText)
+            if (durationMatch != null) {
+                val amount = durationMatch.groupValues[1].toIntOrNull()
+                val unit = durationMatch.groupValues[2]
+                durationSeconds = amount?.let {
+                    when {
+                        unit.startsWith("hour") || unit.startsWith("hr") -> it * 3600
+                        unit.startsWith("min") -> it * 60
+                        else -> it
+                    }
+                }
             }
         }
 
@@ -160,6 +177,7 @@ object EntityExtractor {
         return ExtractedEntities(
             timeHour = timeHour,
             timeMinute = timeMinute,
+            durationSeconds = durationSeconds,
             repeatDays = repeatDays,
             query = query,
             message = message,

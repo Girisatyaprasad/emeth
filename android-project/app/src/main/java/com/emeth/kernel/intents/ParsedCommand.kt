@@ -14,6 +14,7 @@ data class ParsedCommand(
     val recipeName: String? = null,
     val timeHour: Int? = null,
     val timeMinute: Int? = null,
+    val durationSeconds: Int? = null,
     val repeatDays: List<Int>? = null, // Using Calendar.SUNDAY, etc.
     val url: String? = null,
     val thresholdValue: Float? = null,

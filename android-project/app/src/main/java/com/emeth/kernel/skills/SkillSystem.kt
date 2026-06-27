@@ -2,6 +2,7 @@ package com.emeth.kernel.skills
 
 import com.emeth.kernel.intents.Intent
 import com.emeth.kernel.intents.ParsedCommand
+import java.util.EnumMap
 
 data class SkillRequest(val command: ParsedCommand, val payload: Any? = null)
 
@@ -21,19 +22,32 @@ interface Skill {
 
 class SkillRegistry {
     private val skills = mutableMapOf<String, Skill>()
+    private val skillsByIntent = EnumMap<Intent, Skill>(Intent::class.java)
 
     @Synchronized
     fun register(skill: Skill) {
+        skills[skill.id]?.let { old ->
+            skillsByIntent.entries.removeAll { it.value.id == old.id }
+        }
         skills[skill.id] = skill
+        Intent.entries.forEach { intent ->
+            if (skill.canHandle(intent)) {
+                skillsByIntent.putIfAbsent(intent, skill)
+            }
+        }
     }
 
     @Synchronized
     fun unregister(skillId: String) {
         skills.remove(skillId)
+        skillsByIntent.entries.removeAll { it.value.id == skillId }
     }
 
     @Synchronized
     fun discover(intent: Intent): Skill? {
-        return skills.values.firstOrNull { it.canHandle(intent) }
+        return skillsByIntent[intent]
     }
+
+    @Synchronized
+    fun supportedIntents(): Set<Intent> = skillsByIntent.keys.toSet()
 }

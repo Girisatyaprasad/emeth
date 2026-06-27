@@ -10,6 +10,8 @@ import com.emeth.kernel.memory.MemoryType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.emeth.kernel.spine.AirOsSpine
+import org.json.JSONObject
 
 class Planner(
     private val context: Context,
@@ -18,6 +20,7 @@ class Planner(
     private val executionEngine: ExecutionEngine
 ) {
     private val memoryStore = MemoryStore(context)
+    private val airOsSpine = AirOsSpine(context)
     private val scope = CoroutineScope(Dispatchers.IO)
     var lastDebugInfo: String = ""
 
@@ -47,9 +50,38 @@ class Planner(
                 if (result is SkillResult.Success || result is SkillResult.Partial) {
                     val meta = "{\"intent\":\"${parsedCommand.intentType.name}\", \"skill_id\":\"${skill.id}\"}"
                     memoryStore.store(MemoryType.EXECUTED_COMMAND, input, meta)
+                    airOsSpine.remember(
+                        kind = "executed_command",
+                        value = input,
+                        payload = JSONObject()
+                            .put("intent", parsedCommand.intentType.name)
+                            .put("skillId", skill.id)
+                            .put("result", result.javaClass.simpleName)
+                    )
+                    airOsSpine.emitBehavior(
+                        kind = "command_completed",
+                        payload = JSONObject()
+                            .put("intent", parsedCommand.intentType.name)
+                            .put("skillId", skill.id)
+                    )
                 } else if (result is SkillResult.Failure) {
                     val meta = "{\"intent\":\"${parsedCommand.intentType.name}\", \"skill_id\":\"${skill.id}\", \"error\":\"${result.reason}\"}"
                     memoryStore.store(MemoryType.SYSTEM_EVENT, input, meta)
+                    airOsSpine.remember(
+                        kind = "command_failure",
+                        value = input,
+                        payload = JSONObject()
+                            .put("intent", parsedCommand.intentType.name)
+                            .put("skillId", skill.id)
+                            .put("reason", result.reason)
+                    )
+                    airOsSpine.emitBehavior(
+                        kind = "command_failed",
+                        payload = JSONObject()
+                            .put("intent", parsedCommand.intentType.name)
+                            .put("skillId", skill.id)
+                            .put("reason", result.reason)
+                    )
                 }
             }
             result

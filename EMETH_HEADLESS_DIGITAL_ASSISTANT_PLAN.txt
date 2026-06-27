@@ -204,3 +204,26 @@ Next required work
 - Add notification memory so Emeth can answer "what did I miss?" from recent observed notifications.
 - Add notification-based automation triggers.
 - Add a direct deployment path that does not depend on Windows CrossDevice mirroring.
+
+Air OS shared spine phase implemented
+- Added a signature-protected ContentProvider at content://com.airos.spine.
+- Added one shared identity scheme:
+  - Stable IDs represent the same entity across every Air OS node.
+  - Unique IDs represent memories and behavioral events.
+- Added shared persistent tables for:
+  - Nodes and app identities
+  - Memories
+  - UI maps
+  - Access mechanisms
+  - Behavioral events
+- Emeth registers as the first assistant node during startup.
+- Emeth publishes its navigation map and Android access mechanisms into the spine.
+- Every successful or failed command is written to shared memory and the behavioral stream.
+- Accessibility publishes a throttled active-screen UI map with stable node IDs.
+- Access is restricted to apps signed with the same Air OS signing certificate.
+
+Next required work
+- Extract the spine contract into a reusable Air OS Android library consumed by every app.
+- Add behavior subscriptions so one node can react to another node's events.
+- Add shared entity reconciliation for contacts, files, media, places, and conversations.
+- Add retention, encryption, export, and user-visible memory controls.

@@ -5,6 +5,13 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import com.emeth.kernel.spine.AirOsSpine
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 
 data class ScreenNode(
     val index: Int,
@@ -23,11 +30,58 @@ data class ScreenSnapshot(
 )
 
 class EmethAccessibilityService : AccessibilityService() {
+    private val spineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private lateinit var airOsSpine: AirOsSpine
+    private var lastUiPublishAt = 0L
+
     override fun onServiceConnected() {
         instance = this
+        airOsSpine = AirOsSpine(this)
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        val eventType = event?.eventType ?: return
+        if (eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+        ) {
+            return
+        }
+        val now = System.currentTimeMillis()
+        if (now - lastUiPublishAt < 750L) return
+        lastUiPublishAt = now
+        val current = snapshot(maxNodes = 60) ?: return
+
+        spineScope.launch {
+            val nodes = JSONArray()
+            current.nodes.forEach { node ->
+                nodes.put(
+                    JSONObject()
+                        .put("id", SharedIdForUi.node(current.packageName, node))
+                        .put("index", node.index)
+                        .put("text", node.text)
+                        .put("class", node.className)
+                        .put("clickable", node.clickable)
+                        .put("editable", node.editable)
+                        .put("scrollable", node.scrollable)
+                        .put("bounds", node.bounds)
+                )
+            }
+            airOsSpine.publishUiMap(
+                key = "screen.active",
+                payload = JSONObject()
+                    .put("package", current.packageName)
+                    .put("title", current.windowTitle)
+                    .put("nodes", nodes)
+                    .put("capturedAt", now)
+            )
+            airOsSpine.emitBehavior(
+                kind = "ui_observed",
+                payload = JSONObject()
+                    .put("package", current.packageName)
+                    .put("nodeCount", current.nodes.size)
+            )
+        }
+    }
 
     override fun onInterrupt() = Unit
 
@@ -185,6 +239,15 @@ class EmethAccessibilityService : AccessibilityService() {
         private data class IndexedAccessibilityNode(
             val index: Int,
             val node: AccessibilityNodeInfo
+        )
+    }
+}
+
+private object SharedIdForUi {
+    fun node(packageName: String?, node: ScreenNode): String {
+        return com.emeth.kernel.spine.SharedId.stableId(
+            "ui_node",
+            packageName.orEmpty() + ":" + node.className + ":" + node.text + ":" + node.bounds
         )
     }
 }

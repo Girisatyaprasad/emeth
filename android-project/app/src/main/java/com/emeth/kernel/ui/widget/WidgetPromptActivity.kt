@@ -13,7 +13,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,17 +36,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import android.widget.Toast
+import android.os.Handler
+import android.os.Looper
+import kotlinx.coroutines.GlobalScope
+
 class WidgetPromptActivity : ComponentActivity() {
     @OptIn(ExperimentalAnimationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Make the window background transparent
         window.decorView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         
         setContent {
             MaterialTheme {
                 Surface(
-                    color = Color.Black.copy(alpha = 0.5f),
+                    color = Color.Transparent,
                     modifier = Modifier
                         .fillMaxSize()
                         .clickable { finish() }
@@ -54,8 +58,8 @@ class WidgetPromptActivity : ComponentActivity() {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 16.dp, vertical = 32.dp),
+                        contentAlignment = Alignment.TopCenter
                     ) {
                         WidgetPromptOverlay(
                             onDismiss = { finish() }
@@ -90,36 +94,46 @@ fun WidgetPromptOverlay(onDismiss: () -> Unit) {
             val parsed = resolver.resolve(text)
             parsedCommand = parsed
             
-            // Check if it's schedulable (e.g. sending a message, setting a reminder)
             if (isSchedulable(parsed.intentType)) {
                 isScheduling = true
             } else {
-                // Execute immediately
-                scope.launch {
-                    withContext(Dispatchers.Default) {
-                        planner.process(text)
+                val commandText = text
+                onDismiss()
+                GlobalScope.launch(Dispatchers.Default) {
+                    val result = planner.process(commandText)
+                    val message = when (result) {
+                        is com.emeth.kernel.skills.SkillResult.Success -> result.message ?: "Task completed"
+                        is com.emeth.kernel.skills.SkillResult.Failure -> result.reason.ifBlank { "Failed to execute" }
+                        is com.emeth.kernel.skills.SkillResult.Partial -> result.message
+                        null -> "Unknown command"
                     }
-                    onDismiss()
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
     }
 
-    // Keep it from closing when clicking inside the box
     Box(
         modifier = Modifier
             .clickable(enabled = false) {}
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .height(56.dp)
+            .clip(RoundedCornerShape(28.dp))
             .background(Color.White)
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
     ) {
-        AnimatedContent(targetState = isScheduling, label = "WidgetState") { scheduling ->
+        AnimatedContent(
+            targetState = isScheduling, 
+            label = "WidgetState",
+            modifier = Modifier.fillMaxSize()
+        ) { scheduling ->
             if (!scheduling) {
                 // Prompt Bar State
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     BasicTextField(
                         value = text,
@@ -140,7 +154,7 @@ fun WidgetPromptOverlay(onDismiss: () -> Unit) {
                         onClick = handleSend,
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(Icons.Filled.Send, contentDescription = "Send", tint = Color.Black)
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send", tint = Color.Black)
                     }
                 }
             } else {
@@ -150,16 +164,8 @@ fun WidgetPromptOverlay(onDismiss: () -> Unit) {
                     originalText = text,
                     onSave = { watcher ->
                         registry.addWatcher(watcher)
+                        Toast.makeText(context, "Scheduled!", Toast.LENGTH_SHORT).show()
                         onDismiss()
-                    },
-                    onCancel = onDismiss,
-                    onExecuteNow = {
-                        scope.launch {
-                            withContext(Dispatchers.Default) {
-                                planner.process(text)
-                            }
-                            onDismiss()
-                        }
                     }
                 )
             }
@@ -171,46 +177,60 @@ fun WidgetPromptOverlay(onDismiss: () -> Unit) {
 fun SchedulingUi(
     command: ParsedCommand,
     originalText: String,
-    onSave: (Watcher) -> Unit,
-    onCancel: () -> Unit,
-    onExecuteNow: () -> Unit
+    onSave: (Watcher) -> Unit
 ) {
     var hour by remember { mutableStateOf(12) }
     var minute by remember { mutableStateOf(0) }
     var isPm by remember { mutableStateOf(false) }
     var recurrence by remember { mutableStateOf(WatcherRecurrence.ONCE) }
+    var showRecurrenceMenu by remember { mutableStateOf(false) }
     
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Schedule this action?", style = MaterialTheme.typography.titleMedium, color = Color.Black)
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Very basic time picker UI for the widget
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { hour = if (hour == 12) 1 else hour + 1 }) { Text("$hour", color = Color.Black) }
-            Text(":", color = Color.Black)
-            OutlinedButton(onClick = { minute = (minute + 15) % 60 }) { Text(minute.toString().padStart(2, '0'), color = Color.Black) }
-            OutlinedButton(onClick = { isPm = !isPm }) { Text(if (isPm) "PM" else "AM", color = Color.Black) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "$hour",
+                color = Color.Black,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.clickable { hour = if (hour == 12) 1 else hour + 1 }.padding(4.dp)
+            )
+            Text(":", color = Color.Black, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = minute.toString().padStart(2, '0'),
+                color = Color.Black,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.clickable { minute = (minute + 15) % 60 }.padding(4.dp)
+            )
+            Text(
+                text = if (isPm) "PM" else "AM",
+                color = Color.Black,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.clickable { isPm = !isPm }.padding(4.dp)
+            )
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = recurrence == WatcherRecurrence.ONCE,
-                onClick = { recurrence = WatcherRecurrence.ONCE },
-                label = { Text("Once", color = Color.Black) }
+        Box {
+            Text(
+                text = when (recurrence) {
+                    WatcherRecurrence.ONCE -> "Once"
+                    WatcherRecurrence.DAILY -> "Daily"
+                    WatcherRecurrence.SELECTIVE_DAYS -> "Custom"
+                },
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.clickable { showRecurrenceMenu = true }.padding(4.dp)
             )
-            FilterChip(
-                selected = recurrence == WatcherRecurrence.DAILY,
-                onClick = { recurrence = WatcherRecurrence.DAILY },
-                label = { Text("Daily", color = Color.Black) }
-            )
+            DropdownMenu(expanded = showRecurrenceMenu, onDismissRequest = { showRecurrenceMenu = false }) {
+                DropdownMenuItem(text = { Text("Once") }, onClick = { recurrence = WatcherRecurrence.ONCE; showRecurrenceMenu = false })
+                DropdownMenuItem(text = { Text("Daily") }, onClick = { recurrence = WatcherRecurrence.DAILY; showRecurrenceMenu = false })
+            }
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
-        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = onExecuteNow) { Text("Run Now") }
-            Spacer(modifier = Modifier.width(8.dp))
-            Button(onClick = {
+        IconButton(
+            onClick = {
                 val hour24 = if (isPm && hour < 12) hour + 12 else if (!isPm && hour == 12) 0 else hour
                 val totalMinutes = hour24 * 60 + minute
                 
@@ -222,15 +242,16 @@ fun SchedulingUi(
                         targetValue = totalMinutes.toFloat()
                     ),
                     action = WatcherAction(
-                        type = "execute_command", // Assume planner can handle this
+                        type = "execute_command",
                         payload = originalText
                     ),
                     recurrence = recurrence
                 )
                 onSave(watcher)
-            }) {
-                Text("Schedule")
-            }
+            },
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Schedule", tint = MaterialTheme.colorScheme.primary)
         }
     }
 }

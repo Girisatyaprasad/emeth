@@ -16,6 +16,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,12 +31,27 @@ fun HomeScreen(planner: Planner) {
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
 
+    var currentTime by remember { mutableStateOf(SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000)
+            currentTime = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp)
     ) {
         Spacer(modifier = Modifier.height(48.dp))
+        
+        Text(
+            text = currentTime,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
         
         Text(
             text = "Emeth",

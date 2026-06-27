@@ -26,103 +26,6 @@ class MainActivity : ComponentActivity() {
             com.emeth.kernel.intents.IntentCapabilityScanner.scanAndPublish(this@MainActivity)
         }
         
-        val eventBus = EventBus()
-        val registry = SkillRegistry()
-        val resolver = IntentResolver()
-        val engine = ExecutionEngine(eventBus)
-        
-        // Register Skills
-        registry.register(CapabilitySkill())
-        registry.register(PermissionStatusSkill(this))
-        registry.register(AndroidActionSkill(this))
-        registry.register(WhatsNextSkill())
-        registry.register(OpenAppSkill(this))
-        registry.register(NotificationSkill(this))
-        registry.register(ContactsSkill(this))
-        registry.register(BrowserSkill(this))
-        
-        // Media Skills
-        registry.register(YouTubeSkill(this))
-        registry.register(LastPlayedYouTubeSkill(this))
-        registry.register(CameraPhotoSkill(this))
-        registry.register(CameraVideoSkill(this))
-        registry.register(VoiceRecordSkill(this))
-        
-        // Health
-        registry.register(StepCountSkill(this))
-
-        // Watchers
-        registry.register(CreateWatcherSkill(this))
-        
-        // System Skills
-        registry.register(FlashlightSkill(this))
-        registry.register(VolumeSkill(this))
-        registry.register(MuteSkill(this))
-        registry.register(BrightnessSkill(this))
-        registry.register(ReadClipboardSkill(this))
-        registry.register(SetClipboardSkill(this))
-        registry.register(ToggleWifiSkill(this))
-        registry.register(ToggleBluetoothSkill(this))
-        registry.register(ToggleHotspotSkill(this))
-        registry.register(StorageSkill(this))
-        registry.register(RamSkill(this))
-        registry.register(BatterySkill(this))
-        registry.register(FileManagementSkill(this))
-        registry.register(PhoneControlSkill(this))
-        registry.register(PhoneRecipeSkill(this))
-        
-        // Communication Skills
-        registry.register(CallContactSkill(this))
-        registry.register(SmsContactSkill(this))
-        registry.register(WhatsAppSkill(this))
-        registry.register(ContactsSearchSkill(this))
-        
-        // Productivity Skills
-        registry.register(CalendarSkill(this))
-        registry.register(AddCalendarEventSkill(this))
-        registry.register(NoteSkill(this))
-        registry.register(AlarmSkill(this))
-        registry.register(TimerSkill(this))
-        registry.register(StopwatchSkill(this))
-        
-        // Web Skills
-        registry.register(WebSearchSkill(this))
-        registry.register(OpenBrowserSkill(this))
-        registry.register(CheckWeatherSkill(this))
-        
-        // Settings Skills
-        registry.register(SettingsSkill(this))
-        registry.register(SettingsWifiSkill(this))
-        registry.register(SettingsBluetoothSkill(this))
-        registry.register(SettingsDisplaySkill(this))
-        registry.register(SettingsSoundSkill(this))
-        registry.register(SettingsAccessibilitySkill(this))
-        registry.register(SettingsSecuritySkill(this))
-        registry.register(SettingsAppsSkill(this))
-        registry.register(SettingsBatterySkill(this))
-        registry.register(SettingsStorageSkill(this))
-        registry.register(SettingsLocationSkill(this))
-        registry.register(SettingsDateTimeSkill(this))
-        registry.register(SettingsNetworkSkill(this))
-        registry.register(SettingsNfcSkill(this))
-        registry.register(SettingsCastSkill(this))
-        registry.register(SettingsHotspotSkill(this))
-        registry.register(SettingsAirplaneModeSkill(this))
-        registry.register(SettingsVpnSkill(this))
-        registry.register(SettingsDataRoamingSkill(this))
-        registry.register(SettingsPrivacySkill(this))
-        registry.register(SettingsBiometricSkill(this))
-        registry.register(SettingsDeveloperSkill(this))
-        registry.register(SettingsAboutSkill(this))
-        registry.register(SettingsAccountSkill(this))
-        registry.register(SettingsNotificationsSkill(this))
-        
-        // Third-Party App Skills
-        registry.register(ThirdPartyAppSkill(this))
-
-        // Memory Skill
-        registry.register(com.emeth.kernel.skills.memory.MemorySkill(this))
-
         // Enqueue Watcher WorkManager
         val workRequest = androidx.work.PeriodicWorkRequestBuilder<com.emeth.kernel.watchers.WatcherWorker>(15, java.util.concurrent.TimeUnit.MINUTES)
             .build()
@@ -135,7 +38,7 @@ class MainActivity : ComponentActivity() {
         val watcherRegistry = com.emeth.kernel.watchers.WatcherRegistry(this)
         watcherRegistry.removeSeededDemoWatchers()
 
-        planner = Planner(this, resolver, registry, engine)
+        planner = com.emeth.kernel.DependencyGraph.providePlanner(this)
         
         setContent {
             EmethScreen(planner = planner)

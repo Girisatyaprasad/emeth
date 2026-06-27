@@ -58,6 +58,22 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name="com.emeth.kernel.ui.widget.WidgetPromptActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="true" />
+
+        <receiver
+            android:name="com.emeth.kernel.ui.widget.EmethWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+
         <service
             android:name="com.emeth.kernel.access.EmethAccessibilityService"
             android:exported="true"

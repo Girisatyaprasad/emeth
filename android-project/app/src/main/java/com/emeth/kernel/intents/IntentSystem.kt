@@ -147,14 +147,15 @@ class IntentResolver {
         var confidence = match.confidence
         var matchReasons = match.reasons
 
-        // Extract app name for generic OPEN_APP if no specific target known but 'open' is used
+        // Extract an app/capability name for generic native and installed-app launches.
         if (intentType == Intent.UNKNOWN || intentType == Intent.OPEN_APP) {
-            val words = expanded.split(" ")
-            if (words.size >= 2 && words[0] in listOf("open", "launch", "start")) {
-                targetApp = words.drop(1).joinToString(" ")
+            val appMatch = Regex("^(?:please\\s+)?(?:open|launch|start|show|use|go to)\\s+(?:the\\s+)?(.+?)(?:\\s+app)?$")
+                .find(expanded)
+            if (appMatch != null) {
+                targetApp = appMatch.groupValues[1].trim()
                 intentType = Intent.OPEN_APP
                 confidence = 0.82f
-                matchReasons = listOf("generic app launch phrase")
+                matchReasons = listOf("native or installed app launch phrase")
             }
         }
 

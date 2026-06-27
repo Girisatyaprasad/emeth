@@ -332,4 +332,60 @@ class IntentResolverTest {
         val hours = resolver.resolve("set timer for 2 hours")
         assertEquals(7200, hours.durationSeconds)
     }
+
+    @Test
+    fun testAndroidNativeAndOemAppLaunchMap() {
+        val appNames = listOf(
+            "phone",
+            "contacts",
+            "messages",
+            "email",
+            "camera",
+            "gallery",
+            "files",
+            "downloads",
+            "clock",
+            "calculator",
+            "maps",
+            "music",
+            "calendar",
+            "browser",
+            "notes",
+            "weather",
+            "recorder"
+        )
+
+        for (appName in appNames) {
+            val parsed = resolver.resolve("open $appName")
+            assertTrue("Failed native app: $appName", parsed.intentType != Intent.UNKNOWN)
+            if (parsed.intentType == Intent.OPEN_APP) {
+                assertEquals(appName, parsed.targetApp)
+            }
+            assertTrue("Low confidence for $appName", parsed.confidence >= 0.75f)
+        }
+
+        val show = resolver.resolve("show the calculator app")
+        assertEquals(Intent.OPEN_APP, show.intentType)
+        assertEquals("calculator", show.targetApp)
+    }
+
+    @Test
+    fun testAndroidSettingsIntentMap() {
+        val commands = mapOf(
+            "open wifi settings" to Intent.OPEN_SETTINGS_WIFI,
+            "open bluetooth settings" to Intent.OPEN_SETTINGS_BLUETOOTH,
+            "open display settings" to Intent.OPEN_SETTINGS_DISPLAY,
+            "open sound settings" to Intent.OPEN_SETTINGS_SOUND,
+            "open accessibility settings" to Intent.OPEN_SETTINGS_ACCESSIBILITY,
+            "open security settings" to Intent.OPEN_SETTINGS_SECURITY,
+            "open apps settings" to Intent.OPEN_SETTINGS_APPS,
+            "open battery settings" to Intent.OPEN_SETTINGS_BATTERY,
+            "open storage settings" to Intent.OPEN_SETTINGS_STORAGE,
+            "open location settings" to Intent.OPEN_SETTINGS_LOCATION,
+            "open date and time settings" to Intent.OPEN_SETTINGS_DATE_TIME
+        )
+        for ((command, expected) in commands) {
+            assertIntent(command, expected)
+        }
+    }
 }

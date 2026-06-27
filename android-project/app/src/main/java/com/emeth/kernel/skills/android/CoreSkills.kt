@@ -27,13 +27,18 @@ class OpenAppSkill(private val context: Context) : Skill {
             return SkillResult.Partial("Which app should I open?")
         }
 
+        AndroidNativeIntentMap.resolve(context, target)?.let { native ->
+            context.startActivity(native.intent)
+            rememberLaunch(native.label, native.intent.component?.packageName ?: "android.intent")
+            return SkillResult.Success("Opened ${native.label}.")
+        }
+
         val packageManager = context.packageManager
-        val launchIntent = packageManager.getInstalledApplications(0)
+        val launchIntent = installedApps()
             .asSequence()
-            .mapNotNull { appInfo ->
-                val label = packageManager.getApplicationLabel(appInfo).toString()
-                val score = appMatchScore(target, label, appInfo.packageName)
-                if (score > 0) Triple(appInfo.packageName, label, score) else null
+            .mapNotNull { app ->
+                val score = appMatchScore(target, app.label, app.packageName)
+                if (score > 0) Triple(app.packageName, app.label, score) else null
             }
             .sortedByDescending { it.third }
             .firstOrNull()
@@ -49,19 +54,35 @@ class OpenAppSkill(private val context: Context) : Skill {
         }
 
         context.startActivity(launchIntent.first)
+        rememberLaunch(launchIntent.second, launchIntent.third)
+        return SkillResult.Success("Opened ${launchIntent.second}.")
+    }
+
+    private fun rememberLaunch(label: String, packageName: String) {
         val memoryStore = com.emeth.kernel.memory.MemoryStore(context)
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             memoryStore.store(
                 com.emeth.kernel.memory.MemoryType.APP_USAGE,
-                launchIntent.second.lowercase(Locale.ROOT),
-                "{\"package\":\"${launchIntent.third}\", \"action\":\"open\"}"
+                label.lowercase(Locale.ROOT),
+                "{\"package\":\"$packageName\", \"action\":\"open\"}"
             )
         }
-        return SkillResult.Success("Opened ${launchIntent.second}.")
+    }
+
+    private fun installedApps(): List<InstalledApp> {
+        installedAppCache?.let { return it }
+        return context.packageManager.getInstalledApplications(0)
+            .map { appInfo ->
+                InstalledApp(
+                    packageName = appInfo.packageName,
+                    label = context.packageManager.getApplicationLabel(appInfo).toString()
+                )
+            }
+            .also { installedAppCache = it }
     }
 
     private fun appMatchScore(query: String, label: String, packageName: String): Int {
-        val q = query.lowercase(Locale.ROOT)
+        val q = AndroidNativeIntentMap.normalize(query)
         val l = label.lowercase(Locale.ROOT)
         val p = packageName.lowercase(Locale.ROOT)
         return when {
@@ -71,6 +92,13 @@ class OpenAppSkill(private val context: Context) : Skill {
             p.contains(q.replace(" ", "")) -> 30
             else -> 0
         }
+    }
+
+    private data class InstalledApp(val packageName: String, val label: String)
+
+    private companion object {
+        @Volatile
+        private var installedAppCache: List<InstalledApp>? = null
     }
 }
 

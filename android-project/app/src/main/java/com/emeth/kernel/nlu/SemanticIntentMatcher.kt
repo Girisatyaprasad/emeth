@@ -154,6 +154,41 @@ object SemanticIntentMatcher {
         if (expandedText.contains("canonical_youtube_search") || (expandedText.contains("canonical_search") && expandedText.contains("canonical_target_youtube")) || (entities.query != null && entities.targetApp == "YouTube")) {
             score(Intent.SEARCH_YOUTUBE, 3.0f, "YouTube search target and query")
         }
+        if (expandedText.contains("settings") && (expandedText.contains("wifi") || expandedText.contains("wi fi"))) {
+            score(Intent.OPEN_SETTINGS_WIFI, 6.0f, "Wi-Fi settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("bluetooth")) {
+            score(Intent.OPEN_SETTINGS_BLUETOOTH, 6.0f, "Bluetooth settings phrase")
+        }
+        if (expandedText.contains("settings") && (expandedText.contains("display") || expandedText.contains("screen"))) {
+            score(Intent.OPEN_SETTINGS_DISPLAY, 6.0f, "display settings phrase")
+        }
+        if (expandedText.contains("settings") && (expandedText.contains("sound") || expandedText.contains("volume"))) {
+            score(Intent.OPEN_SETTINGS_SOUND, 6.0f, "sound settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("accessibility")) {
+            score(Intent.OPEN_SETTINGS_ACCESSIBILITY, 6.0f, "accessibility settings phrase")
+        }
+        if (expandedText.contains("settings") && (expandedText.contains("security") || expandedText.contains("privacy"))) {
+            score(Intent.OPEN_SETTINGS_SECURITY, 6.0f, "security settings phrase")
+        }
+        if (expandedText.contains("settings") && (expandedText.contains("apps") || expandedText.contains("applications"))) {
+            score(Intent.OPEN_SETTINGS_APPS, 6.0f, "apps settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("battery")) {
+            score(Intent.OPEN_SETTINGS_BATTERY, 6.0f, "battery settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("storage")) {
+            score(Intent.OPEN_SETTINGS_STORAGE, 6.0f, "storage settings phrase")
+        }
+        if (expandedText.contains("settings") && expandedText.contains("location")) {
+            score(Intent.OPEN_SETTINGS_LOCATION, 6.0f, "location settings phrase")
+        }
+        if (expandedText.contains("settings") &&
+            (expandedText.contains("date") || expandedText.contains("time"))
+        ) {
+            score(Intent.OPEN_SETTINGS_DATE_TIME, 6.0f, "date/time settings phrase")
+        }
         if (expandedText.contains("canonical_settings") || expandedText.contains("settings")) {
             score(Intent.OPEN_SETTINGS, 4.0f, "settings keyword")
         }
@@ -324,6 +359,9 @@ object SemanticIntentMatcher {
         }
 
         // --- Low Priority (Generic App Open) ---
+        if (Regex("^(?:please\\s+)?(?:open|launch|start|show|use|go to)\\s+").containsMatchIn(expandedText)) {
+            score(Intent.OPEN_APP, 3.5f, "generic installed or native app launch phrase")
+        }
         if (expandedText.contains("youtube")) {
             score(Intent.OPEN_YOUTUBE, 1.0f, "YouTube keyword")
         }

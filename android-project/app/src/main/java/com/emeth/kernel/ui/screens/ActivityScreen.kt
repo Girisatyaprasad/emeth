@@ -18,7 +18,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import com.emeth.kernel.ui.components.GlassSurface
 import com.emeth.kernel.watchers.ConditionOp
 import com.emeth.kernel.watchers.Watcher
 import com.emeth.kernel.watchers.WatcherRegistry
@@ -52,7 +51,6 @@ fun ActivityScreen() {
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(bottom = 112.dp),
             modifier = Modifier.fillMaxSize()
         ) {
             if (automations.isEmpty()) {
@@ -91,7 +89,11 @@ fun ActivityScreen() {
 @Composable
 private fun AutomationCard(title: String, body: String, onDelete: (() -> Unit)? = null) {
     val haptics = LocalHapticFeedback.current
-    GlassSurface(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween

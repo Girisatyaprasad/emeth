@@ -9,9 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.emeth.kernel.planner.Planner
@@ -33,14 +30,10 @@ fun EmethScreen(planner: Planner) {
     EmethTheme {
         Scaffold(
             bottomBar = {
-                Surface(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.35f)),
-                    shadowElevation = 12.dp
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    tonalElevation = 0.dp
                 ) {
-                NavigationBar(containerColor = Color.Transparent, tonalElevation = 0.dp) {
                     NavigationBarItem(
                         selected = currentScreen == Screen.HOME,
                         onClick = {
@@ -68,7 +61,6 @@ fun EmethScreen(planner: Planner) {
                         icon = { Icon(Icons.Filled.Lock, contentDescription = "Access") },
                         alwaysShowLabel = false
                     )
-                }
                 }
             }
         ) { padding ->

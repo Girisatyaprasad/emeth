@@ -14,11 +14,8 @@ import com.emeth.kernel.skills.SkillResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import com.emeth.kernel.ui.components.GlassSurface
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,8 +30,6 @@ fun HomeScreen(planner: Planner) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .imePadding()
             .padding(24.dp)
     ) {
         Spacer(modifier = Modifier.height(48.dp))
@@ -48,7 +43,6 @@ fun HomeScreen(planner: Planner) {
         )
         Spacer(modifier = Modifier.height(32.dp))
 
-        GlassSurface(modifier = Modifier.fillMaxWidth(), interactive = true) {
         OutlinedTextField(
             value = inputText,
             onValueChange = { inputText = it },
@@ -56,14 +50,10 @@ fun HomeScreen(planner: Planner) {
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                unfocusedContainerColor = androidx.compose.ui.graphics.Color.Transparent,
-                focusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent
+                unfocusedBorderColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
             ),
             singleLine = true
         )
-        }
         
         Spacer(modifier = Modifier.height(16.dp))
         

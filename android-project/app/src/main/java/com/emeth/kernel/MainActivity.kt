@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
         // Register Skills
         registry.register(CapabilitySkill())
         registry.register(PermissionStatusSkill(this))
+        registry.register(AndroidActionSkill(this))
         registry.register(WhatsNextSkill())
         registry.register(OpenAppSkill(this))
         registry.register(NotificationSkill(this))

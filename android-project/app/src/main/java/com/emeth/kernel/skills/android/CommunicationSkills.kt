@@ -146,13 +146,6 @@ class WhatsAppSkill(private val context: Context) : Skill {
     }
 
     private fun sendMessage(request: SkillRequest): SkillResult {
-        if (request.command.actionMode == "headless") {
-            return SkillResult.Partial(
-                "Android public app intents do not allow true headless WhatsApp sends. I can prepare the WhatsApp send screen with the message filled in.",
-                mapOf("supportedMode" to "two_step")
-            )
-        }
-
         val rawText = request.command.rawText.lowercase()
         val message = request.command.message ?: extractMessageBeforeRecipient(rawText)
         if (message.isNullOrBlank()) {
@@ -166,7 +159,13 @@ class WhatsAppSkill(private val context: Context) : Skill {
             return ContactPhoneResolver.failure(context, contact)
         }
         val intent = if (!phone.isNullOrBlank()) {
-            AndroidIntent(AndroidIntent.ACTION_VIEW, Uri.parse("https://wa.me/$phone?text=${Uri.encode(message)}"))
+            val waNumber = phone.filter { it.isDigit() }
+            AndroidIntent(
+                AndroidIntent.ACTION_VIEW,
+                Uri.parse("https://wa.me/$waNumber?text=${Uri.encode(message)}")
+            ).apply {
+                setPackage(installedWhatsAppPackage())
+            }
         } else {
             AndroidIntent(AndroidIntent.ACTION_SEND).apply {
                 type = "text/plain"
@@ -178,7 +177,16 @@ class WhatsAppSkill(private val context: Context) : Skill {
         }
 
         context.startActivity(intent)
-        return SkillResult.Success("Prepared WhatsApp message${if (phone.isNullOrBlank()) "" else " to $phone"}.")
+        if (!phone.isNullOrBlank()) {
+            Thread.sleep(1200)
+            if (com.emeth.kernel.access.EmethAccessibilityService.tapText("Send")) {
+                return SkillResult.Success("Sent WhatsApp message to ${contact ?: phone}.")
+            }
+            return SkillResult.Partial(
+                "Prepared the WhatsApp message to ${contact ?: phone}. Enable Accessibility control in Access so Emeth can press Send."
+            )
+        }
+        return SkillResult.Success("Opened WhatsApp with the message ready.")
     }
 
     private fun sendStatus(request: SkillRequest): SkillResult {
@@ -277,21 +285,42 @@ private object ContactPhoneResolver {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
             return null
         }
-        val projection = arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER)
-        val selection = "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} LIKE ?"
-        val args = arrayOf("%$name%")
+        val projection = arrayOf(
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+            ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER,
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY
+        )
+        val filterUri = ContactsContract.CommonDataKinds.Phone.CONTENT_FILTER_URI
+            .buildUpon()
+            .appendPath(Uri.encode(name))
+            .build()
+        val wanted = normalizeName(name)
+        var bestNumber: String? = null
+        var bestScore = -1
         context.contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            filterUri,
             projection,
-            selection,
-            args,
+            null,
+            null,
             "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME_PRIMARY} ASC"
         )?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                return cursor.getString(0)?.filter { it.isDigit() || it == '+' }
+            while (cursor.moveToNext()) {
+                val displayName = cursor.getString(2).orEmpty()
+                val candidate = cursor.getString(1) ?: cursor.getString(0) ?: continue
+                val normalizedDisplay = normalizeName(displayName)
+                val score = when {
+                    normalizedDisplay == wanted -> 100
+                    normalizedDisplay.startsWith(wanted) -> 80
+                    normalizedDisplay.contains(wanted) -> 60
+                    else -> 20
+                }
+                if (score > bestScore) {
+                    bestScore = score
+                    bestNumber = candidate.filter { it.isDigit() || it == '+' }
+                }
             }
         }
-        return null
+        return bestNumber
     }
 
     fun failure(context: Context, name: String): SkillResult {
@@ -301,6 +330,11 @@ private object ContactPhoneResolver {
         } else {
             SkillResult.Failure("Contacts permission is required. Open the Access tab and allow Contacts.")
         }
+    }
+
+    private fun normalizeName(value: String): String {
+        return value.lowercase()
+            .replace(Regex("[^a-z0-9]"), "")
     }
 }
 

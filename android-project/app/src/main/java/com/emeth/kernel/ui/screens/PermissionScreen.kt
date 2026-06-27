@@ -33,7 +33,6 @@ import com.emeth.kernel.permissions.PermissionSetup
 import com.emeth.kernel.permissions.PermissionStatus
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import com.emeth.kernel.ui.components.GlassSurface
 
 @Composable
 fun PermissionScreen() {
@@ -81,7 +80,6 @@ fun PermissionScreen() {
 
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 112.dp),
             modifier = Modifier.fillMaxSize()
         ) {
             items(statuses, key = { it.id }) { status ->
@@ -119,7 +117,11 @@ private fun PermissionCard(
     onSettings: () -> Unit
 ) {
     val haptics = LocalHapticFeedback.current
-    GlassSurface(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,

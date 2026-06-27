@@ -253,3 +253,12 @@ Runtime intent organism phase implemented
 - Emeth asks PackageManager which installed activities actually handle each contract and MIME variant.
 - The resolved action/handler inventory is published to the Air OS spine as android.intent.catalog.
 - This catalog grows with Android and installed apps without invoking unknown private components.
+
+Runtime repair phase implemented
+- Reverted the oversized translucent command and navigation containers.
+- Restored compact Material surfaces and restrained spacing.
+- Plain commands such as "send hii to mom" now resolve as an explicit WhatsApp send.
+- Contact lookup now uses Android's phone filter provider, fuzzy display-name ranking, and normalized phone numbers.
+- WhatsApp opens the exact contact composer and presses Send through Accessibility when that access is enabled.
+- Added exact execution of any discovered public Android activity action by ACTION_* constant or full action string.
+- Exact action execution checks PackageManager first and refuses actions with no exported handler.

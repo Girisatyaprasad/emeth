@@ -232,6 +232,13 @@ class IntentResolverTest {
     }
 
     @Test
+    fun testExactAndroidActionExecutionIntent() {
+        assertIntent("run android intent ACTION_CREATE_NOTE", Intent.EXECUTE_ANDROID_ACTION)
+        assertIntent("execute android action ACTION_WIFI_SETTINGS", Intent.EXECUTE_ANDROID_ACTION)
+        assertIntent("open intent android.settings.VPN_SETTINGS", Intent.EXECUTE_ANDROID_ACTION)
+    }
+
+    @Test
     fun testWhatsNextGuidance() {
         assertIntent("what's next", Intent.WHAT_IS_NEXT)
         assertIntent("next step", Intent.WHAT_IS_NEXT)
@@ -354,6 +361,10 @@ class IntentResolverTest {
         val whatsapp = resolver.resolve("send hello to Satya on whatsapp")
         assertEquals(Intent.SEND_WHATSAPP, whatsapp.intentType)
         assertEquals("satya", whatsapp.contactName)
+
+        val defaultSend = resolver.resolve("send hii to mom")
+        assertEquals(Intent.SEND_WHATSAPP, defaultSend.intentType)
+        assertEquals("mom", defaultSend.contactName)
     }
 
     @Test

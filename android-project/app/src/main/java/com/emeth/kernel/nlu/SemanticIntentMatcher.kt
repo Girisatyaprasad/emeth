@@ -150,7 +150,9 @@ object SemanticIntentMatcher {
         if (expandedText.contains("whatsapp") && expandedText.contains("status") && expandedText.contains("video")) {
             score(Intent.SEND_WHATSAPP_STATUS, 5.0f, "WhatsApp status video phrase")
         }
-        if (expandedText.contains("whatsapp") && (expandedText.contains("send") || expandedText.contains("message") || expandedText.contains("text"))) {
+        if (expandedText.contains("whatsapp") && !expandedText.contains("status") &&
+            (expandedText.contains("send") || expandedText.contains("message") || expandedText.contains("text"))
+        ) {
             score(Intent.SEND_WHATSAPP, 5.0f, "WhatsApp send/message phrase")
         }
         if (expandedText.contains("whatsapp") && expandedText.contains("mark") && expandedText.contains("read")) {
@@ -158,6 +160,12 @@ object SemanticIntentMatcher {
         }
         if (expandedText.contains("mute") && (expandedText.contains("whatsapp") || expandedText.contains("chat") || expandedText.contains("group"))) {
             score(Intent.MUTE_WHATSAPP_CHAT, 5.0f, "WhatsApp mute chat phrase")
+        }
+        if (Regex("^(?:please\\s+)?(?:send|message)\\s+.+\\s+to\\s+.+$").matches(expandedText) &&
+            !expandedText.contains("sms") && !expandedText.contains("email") &&
+            !(expandedText.contains("whatsapp") && expandedText.contains("status"))
+        ) {
+            score(Intent.SEND_WHATSAPP, 5.0f, "explicit message and recipient defaults to WhatsApp")
         }
 
         // --- Medium Priority (Specific Actions) ---
@@ -375,6 +383,9 @@ object SemanticIntentMatcher {
             expandedText.contains("enabled access")
         ) {
             score(Intent.QUERY_PERMISSION_STATUS, 5.0f, "permission status phrase")
+        }
+        if (Regex("^(?:run|execute|open)\\s+(?:android\\s+)?(?:intent|action)\\s+").containsMatchIn(expandedText)) {
+            score(Intent.EXECUTE_ANDROID_ACTION, 7.0f, "explicit Android action contract")
         }
         if (expandedText.contains("last screen") || expandedText.contains("previous screen snapshot")) {
             score(Intent.QUERY_LAST_SCREEN, 6.0f, "last screen memory phrase")

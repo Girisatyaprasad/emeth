@@ -12,14 +12,14 @@ import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.sp
 
-val BackgroundLight = Color(0xFFF2F6FA)
+val BackgroundLight = Color(0xFFF9F9F9)
 val SurfaceLight = Color(0xFFFFFFFF)
 val TextPrimaryLight = Color(0xFF1C1C1E)
 val TextSecondaryLight = Color(0xFF8E8E93)
 val AccentBlue = Color(0xFF007AFF)
 
-val BackgroundDark = Color(0xFF090B0E)
-val SurfaceDark = Color(0xFF20252B)
+val BackgroundDark = Color(0xFF000000)
+val SurfaceDark = Color(0xFF1C1C1E)
 val TextPrimaryDark = Color(0xFFFFFFFF)
 val TextSecondaryDark = Color(0xFF8E8E93)
 

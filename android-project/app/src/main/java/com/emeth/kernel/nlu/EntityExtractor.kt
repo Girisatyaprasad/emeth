@@ -8,6 +8,7 @@ data class ExtractedEntities(
     val repeatDays: List<Int>? = null,
     val query: String? = null,
     val message: String? = null,
+    val contactName: String? = null,
     val fileQuery: String? = null,
     val actionMode: String? = null,
     val uiTarget: String? = null,
@@ -27,6 +28,7 @@ object EntityExtractor {
         var repeatDays: List<Int>? = null
         var query: String? = null
         var message: String? = null
+        var contactName: String? = null
         var fileQuery: String? = null
         var actionMode: String? = null
         var uiTarget: String? = null
@@ -149,6 +151,7 @@ object EntityExtractor {
         }
 
         message = extractMessage(expandedText)
+        contactName = extractContactName(expandedText)
         uiTarget = extractUiTarget(expandedText)
         uiIndex = extractUiIndex(expandedText)
         recipeName = extractRecipeName(expandedText)
@@ -160,6 +163,7 @@ object EntityExtractor {
             repeatDays = repeatDays,
             query = query,
             message = message,
+            contactName = contactName,
             fileQuery = fileQuery,
             actionMode = actionMode,
             uiTarget = uiTarget,
@@ -171,6 +175,24 @@ object EntityExtractor {
             conditionOp = conditionOp,
             url = url
         )
+    }
+
+    private fun extractContactName(text: String): String? {
+        val patterns = listOf(
+            "(?:call|dial)\\s+(.+)",
+            "(?:send|text|message)\\s+.+?\\s+to\\s+(.+?)(?:\\s+(?:on|via)\\s+(?:whatsapp|sms))?$",
+            "(?:send|text|message)\\s+(?:whatsapp|sms)\\s+(?:to\\s+)?(.+?)(?:\\s+(?:saying|message|text)\\s+.+)?$",
+            "(?:open|message)\\s+(.+?)\\s+(?:on|in)\\s+whatsapp$"
+        )
+        for (pattern in patterns) {
+            val value = Regex(pattern).find(text)?.groupValues?.getOrNull(1)
+                ?.replace(Regex("\\s+(?:headless|two_step|two step)$"), "")
+                ?.trim()
+            if (!value.isNullOrBlank() && value !in setOf("whatsapp", "sms", "message")) {
+                return value
+            }
+        }
+        return null
     }
 
     private fun extractMessage(text: String): String? {

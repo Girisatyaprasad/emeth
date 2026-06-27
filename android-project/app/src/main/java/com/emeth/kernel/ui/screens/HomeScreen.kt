@@ -59,16 +59,12 @@ fun HomeScreen(planner: Planner) {
                                 result.message ?: "Done."
                             }
                             is SkillResult.Failure -> {
-                                if (result.reason.contains("permission", ignoreCase = true)) {
-                                    "I need permission to do that."
-                                } else {
-                                    "I couldn't do that."
-                                }
+                                result.reason.ifBlank { "I couldn't do that." }
                             }
                             is SkillResult.Partial -> result.message
                         }
                     } else {
-                        "I'm not sure how to do that."
+                        "No skill is registered for that command."
                     }
                     inputText = ""
                 },

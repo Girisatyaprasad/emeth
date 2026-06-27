@@ -163,7 +163,7 @@ class IntentResolver {
             rawText = input,
             targetApp = targetApp,
             query = entities.query,
-            contactName = null,
+            contactName = entities.contactName,
             message = entities.message,
             fileQuery = entities.fileQuery,
             actionMode = entities.actionMode,

@@ -144,20 +144,73 @@ object SemanticIntentMatcher {
         }
 
         // --- Medium Priority (Specific Actions) ---
+        if (expandedText.contains("youtube") &&
+            (expandedText.contains("open") || expandedText.contains("launch") ||
+                expandedText.contains("start") || expandedText.contains("take me to") ||
+                expandedText.contains("play youtube") || expandedText.contains("want youtube"))
+        ) {
+            score(Intent.OPEN_YOUTUBE, 4.5f, "explicit YouTube launch phrase")
+        }
         if (expandedText.contains("canonical_youtube_search") || (expandedText.contains("canonical_search") && expandedText.contains("canonical_target_youtube")) || (entities.query != null && entities.targetApp == "YouTube")) {
             score(Intent.SEARCH_YOUTUBE, 3.0f, "YouTube search target and query")
         }
         if (expandedText.contains("canonical_settings") || expandedText.contains("settings")) {
-            score(Intent.OPEN_SETTINGS, 2.0f, "settings keyword")
+            score(Intent.OPEN_SETTINGS, 4.0f, "settings keyword")
         }
         if (expandedText.contains("canonical_battery")) {
-            score(Intent.CHECK_BATTERY, 2.0f, "battery keyword")
+            score(Intent.CHECK_BATTERY, 4.0f, "battery keyword")
         }
         if (expandedText.contains("canonical_steps")) {
-            score(Intent.CHECK_STEPS, 2.0f, "steps keyword")
+            score(Intent.CHECK_STEPS, 4.0f, "steps keyword")
         }
         if (expandedText.contains("canonical_storage")) {
-            score(Intent.CHECK_STORAGE, 2.0f, "storage keyword")
+            score(Intent.CHECK_STORAGE, 4.0f, "storage keyword")
+        }
+        if (expandedText.contains("flashlight") || expandedText.contains("torch")) {
+            score(Intent.TOGGLE_FLASHLIGHT, 4.5f, "flashlight control phrase")
+        }
+        if (expandedText.contains("mute") && !expandedText.contains("whatsapp") &&
+            !expandedText.contains("chat") && !expandedText.contains("group")
+        ) {
+            score(Intent.MUTE_VOLUME, 4.5f, "device mute phrase")
+        }
+        if (expandedText.contains("volume") || expandedText.contains("sound level")) {
+            score(Intent.SET_VOLUME, 4.0f, "volume control phrase")
+        }
+        if (expandedText.contains("brightness")) {
+            score(Intent.SET_BRIGHTNESS, 4.0f, "brightness control phrase")
+        }
+        if (expandedText.contains("clipboard") && (expandedText.contains("read") ||
+                expandedText.contains("show") || expandedText.contains("what")))
+        {
+            score(Intent.READ_CLIPBOARD, 4.5f, "clipboard read phrase")
+        }
+        if (expandedText.contains("ram") || expandedText.contains("memory available")) {
+            score(Intent.CHECK_RAM, 4.0f, "RAM status phrase")
+        }
+        if (expandedText.startsWith("call ") || expandedText.startsWith("dial ")) {
+            score(Intent.CALL_CONTACT, 5.0f, "call contact phrase")
+        }
+        if ((expandedText.startsWith("send sms") || expandedText.startsWith("text ")) &&
+            !expandedText.contains("whatsapp")
+        ) {
+            score(Intent.SMS_CONTACT, 5.0f, "SMS contact phrase")
+        }
+        if ((expandedText.contains("open") || expandedText.contains("launch")) &&
+            expandedText.contains("whatsapp")
+        ) {
+            score(Intent.OPEN_WHATSAPP, 5.0f, "explicit WhatsApp launch phrase")
+        }
+        if (expandedText.contains("timer")) {
+            score(Intent.SET_TIMER, 4.5f, "timer phrase")
+        }
+        if (expandedText.contains("stopwatch")) {
+            score(Intent.START_STOPWATCH, 4.5f, "stopwatch phrase")
+        }
+        if (expandedText.contains("calendar") && !expandedText.contains("add") &&
+            !expandedText.contains("create")
+        ) {
+            score(Intent.OPEN_CALENDAR, 4.0f, "calendar launch phrase")
         }
         if (expandedText == "back" || expandedText.contains("go back") || expandedText.contains("press back")) {
             score(Intent.PHONE_BACK, 5.0f, "phone back control phrase")

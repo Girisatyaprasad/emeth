@@ -285,4 +285,38 @@ class IntentResolverTest {
         assertEquals(Intent.UNKNOWN, unknown.intentType)
         assertEquals(0f, unknown.confidence)
     }
+
+    @Test
+    fun testCommonCommandsAreExecutableConfidence() {
+        val commands = listOf(
+            "open youtube" to Intent.OPEN_YOUTUBE,
+            "open settings" to Intent.OPEN_SETTINGS,
+            "battery percentage" to Intent.CHECK_BATTERY,
+            "turn on flashlight" to Intent.TOGGLE_FLASHLIGHT,
+            "mute phone" to Intent.MUTE_VOLUME,
+            "show volume" to Intent.SET_VOLUME,
+            "adjust brightness" to Intent.SET_BRIGHTNESS,
+            "read clipboard" to Intent.READ_CLIPBOARD,
+            "check ram" to Intent.CHECK_RAM,
+            "call Satya" to Intent.CALL_CONTACT,
+            "open whatsapp" to Intent.OPEN_WHATSAPP,
+            "set a timer" to Intent.SET_TIMER
+        )
+
+        for ((input, expected) in commands) {
+            val parsed = resolver.resolve(input)
+            assertEquals("Failed on: $input", expected, parsed.intentType)
+            assertTrue("Planner would reject '$input' at ${parsed.confidence}", parsed.confidence >= 0.75f)
+        }
+    }
+
+    @Test
+    fun testContactExtraction() {
+        val call = resolver.resolve("call Satya")
+        assertEquals("satya", call.contactName)
+
+        val whatsapp = resolver.resolve("send hello to Satya on whatsapp")
+        assertEquals(Intent.SEND_WHATSAPP, whatsapp.intentType)
+        assertEquals("satya", whatsapp.contactName)
+    }
 }

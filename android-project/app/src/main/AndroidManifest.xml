@@ -60,7 +60,7 @@
 
         <activity
             android:name="com.emeth.kernel.ui.widget.WidgetPromptActivity"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:theme="@style/Theme.Transparent"
             android:exported="true" />
 
         <receiver

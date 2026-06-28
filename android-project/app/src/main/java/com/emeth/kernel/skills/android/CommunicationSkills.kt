@@ -73,14 +73,20 @@ class WhatsAppSkill(private val context: Context) : Skill {
         intent == Intent.OPEN_WHATSAPP_CALLS ||
         intent == Intent.OPEN_WHATSAPP_SETTINGS ||
         intent == Intent.SEND_WHATSAPP ||
+        intent == Intent.SEND_WHATSAPP_GROUP ||
         intent == Intent.SEND_WHATSAPP_STATUS ||
+        intent == Intent.WHATSAPP_CALL ||
+        intent == Intent.DELETE_WHATSAPP_MESSAGE ||
         intent == Intent.MARK_WHATSAPP_READ ||
         intent == Intent.MUTE_WHATSAPP_CHAT
 
     override fun execute(request: SkillRequest): SkillResult {
         return when (request.command.intentType) {
             Intent.SEND_WHATSAPP -> sendMessage(request)
+            Intent.SEND_WHATSAPP_GROUP -> sendGroupMessage(request)
             Intent.SEND_WHATSAPP_STATUS -> sendStatus(request)
+            Intent.WHATSAPP_CALL -> callContact(request)
+            Intent.DELETE_WHATSAPP_MESSAGE -> deleteMessage(request)
             Intent.MARK_WHATSAPP_READ -> unsupportedChatStateAction("mark WhatsApp chats as read")
             Intent.MUTE_WHATSAPP_CHAT -> unsupportedChatStateAction("list or mute WhatsApp chats")
             Intent.OPEN_WHATSAPP_CHATS -> openSection("Chats")
@@ -188,6 +194,104 @@ class WhatsAppSkill(private val context: Context) : Skill {
         return SkillResult.Success("Opened WhatsApp with the message ready.")
     }
 
+    private fun sendGroupMessage(request: SkillRequest): SkillResult {
+        val rawText = request.command.rawText.lowercase()
+        val message = request.command.message ?: extractMessageBeforeRecipient(rawText)
+        if (message.isNullOrBlank()) {
+            return SkillResult.Partial("What message should I send to the group?")
+        }
+        val groupName = request.command.contactName ?: extractRecipient(rawText)
+        if (groupName.isNullOrBlank()) {
+            return SkillResult.Partial("Which group should I send this to?")
+        }
+
+        openWhatsApp()
+        Thread.sleep(1500)
+        
+        if (!com.emeth.kernel.access.EmethAccessibilityService.tapContentDescription("Search")) {
+            return SkillResult.Failure("Could not find the Search button in WhatsApp.")
+        }
+        Thread.sleep(500)
+        com.emeth.kernel.access.EmethAccessibilityService.typeText(groupName)
+        Thread.sleep(2000) 
+        
+        if (!com.emeth.kernel.access.EmethAccessibilityService.tapText(groupName) &&
+            !com.emeth.kernel.access.EmethAccessibilityService.tapText(groupName.capitalize())) {
+            return SkillResult.Failure("Could not find group $groupName in search results.")
+        }
+        Thread.sleep(1000)
+        
+        com.emeth.kernel.access.EmethAccessibilityService.typeText(message)
+        Thread.sleep(500)
+        
+        if (com.emeth.kernel.access.EmethAccessibilityService.waitForAndClick("Send", 3000)) {
+            return SkillResult.Success("Sent message to WhatsApp group $groupName.")
+        }
+        
+        return SkillResult.Partial("Prepared group message to $groupName. Tap send.")
+    }
+
+    private fun callContact(request: SkillRequest): SkillResult {
+        val rawText = request.command.rawText.lowercase()
+        val contactName = request.command.contactName ?: extractRecipient(rawText)
+        if (contactName.isNullOrBlank()) {
+            return SkillResult.Partial("Who should I call on WhatsApp?")
+        }
+        val isVideo = rawText.contains("video")
+        
+        openWhatsApp()
+        Thread.sleep(1500)
+        if (!com.emeth.kernel.access.EmethAccessibilityService.tapContentDescription("Search")) {
+            return SkillResult.Failure("Could not find the Search button in WhatsApp.")
+        }
+        Thread.sleep(500)
+        com.emeth.kernel.access.EmethAccessibilityService.typeText(contactName)
+        Thread.sleep(2000)
+        if (!com.emeth.kernel.access.EmethAccessibilityService.tapText(contactName) &&
+            !com.emeth.kernel.access.EmethAccessibilityService.tapText(contactName.capitalize())) {
+            return SkillResult.Failure("Could not find contact $contactName in search results.")
+        }
+        Thread.sleep(1000)
+        
+        val callType = if (isVideo) "Video call" else "Voice call"
+        if (com.emeth.kernel.access.EmethAccessibilityService.tapContentDescription(callType) ||
+            com.emeth.kernel.access.EmethAccessibilityService.tapText(callType)) {
+            return SkillResult.Success("Started WhatsApp $callType with $contactName.")
+        }
+        
+        return SkillResult.Partial("Opened chat with $contactName. Tap the call button.")
+    }
+
+    private fun deleteMessage(request: SkillRequest): SkillResult {
+        val rawText = request.command.rawText
+        val match = Regex("saying (?:'|\")?(.+?)(?:'|\")?(?:\\s+in|$)").find(rawText)
+        val messageText = match?.groupValues?.getOrNull(1)?.trim() 
+            ?: request.command.message
+            ?: extractMessageBeforeRecipient(rawText)
+            ?: return SkillResult.Partial("What exactly did the message say? (e.g. 'delete the message saying hello')")
+
+        openWhatsApp()
+        Thread.sleep(1500)
+        
+        if (!com.emeth.kernel.access.EmethAccessibilityService.longTapText(messageText)) {
+            return SkillResult.Failure("Could not find the message '$messageText' on the screen. Please open the chat where this message was sent.")
+        }
+        
+        Thread.sleep(1000)
+        if (!com.emeth.kernel.access.EmethAccessibilityService.tapContentDescription("Delete")) {
+            return SkillResult.Partial("Selected the message, but could not find the Delete icon.")
+        }
+        
+        Thread.sleep(1000)
+        if (com.emeth.kernel.access.EmethAccessibilityService.tapText("Delete for everyone")) {
+            return SkillResult.Success("Deleted the message for everyone.")
+        } else if (com.emeth.kernel.access.EmethAccessibilityService.tapText("Delete for me")) {
+             return SkillResult.Success("Deleted the message for me.")
+        }
+        
+        return SkillResult.Partial("Opened the delete dialog but couldn't confirm deletion.")
+    }
+
     private fun sendStatus(request: SkillRequest): SkillResult {
         val latestVideo = latestDownloadedVideo()
             ?: return SkillResult.Partial("I couldn't find a downloaded video to send to WhatsApp status.")
@@ -274,7 +378,12 @@ class WhatsAppSkill(private val context: Context) : Skill {
     }
 
     private fun extractMessageBeforeRecipient(rawText: String): String? {
-        val match = Regex("(?:send|text|message)\\s+(.+?)\\s+to\\s+").find(rawText)
+        val match = Regex("(?:send|text|message|delete)\\s+(.+?)\\s+(?:to|in|on)\\s+").find(rawText)
+        return match?.groupValues?.getOrNull(1)?.trim()
+    }
+
+    private fun extractRecipient(rawText: String): String? {
+        val match = Regex("(?:to|call)\\s+(.+?)(?:\\s+on\\s+whatsapp|$)").find(rawText)
         return match?.groupValues?.getOrNull(1)?.trim()
     }
 }

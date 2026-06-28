@@ -150,7 +150,17 @@ object SemanticIntentMatcher {
         if (expandedText.contains("whatsapp") && expandedText.contains("status") && expandedText.contains("video")) {
             score(Intent.SEND_WHATSAPP_STATUS, 5.0f, "WhatsApp status video phrase")
         }
-        if (expandedText.contains("whatsapp") && !expandedText.contains("status") &&
+        if (expandedText.contains("whatsapp") && expandedText.contains("call") && !expandedText.contains("calls")) {
+            score(Intent.WHATSAPP_CALL, 5.5f, "WhatsApp call phrase")
+        }
+        if (expandedText.contains("delete") && expandedText.contains("message") && expandedText.contains("whatsapp")) {
+            score(Intent.DELETE_WHATSAPP_MESSAGE, 6.0f, "WhatsApp delete message phrase")
+        }
+        if (expandedText.contains("whatsapp") && expandedText.contains("group") && 
+            (expandedText.contains("send") || expandedText.contains("message") || expandedText.contains("text"))) {
+            score(Intent.SEND_WHATSAPP_GROUP, 6.0f, "WhatsApp group message phrase")
+        }
+        if (expandedText.contains("whatsapp") && !expandedText.contains("status") && !expandedText.contains("group") &&
             (expandedText.contains("send") || expandedText.contains("message") || expandedText.contains("text"))
         ) {
             score(Intent.SEND_WHATSAPP, 5.0f, "WhatsApp send/message phrase")
@@ -163,9 +173,13 @@ object SemanticIntentMatcher {
         }
         if (Regex("^(?:please\\s+)?(?:send|message)\\s+.+\\s+to\\s+.+$").matches(expandedText) &&
             !expandedText.contains("sms") && !expandedText.contains("email") &&
-            !(expandedText.contains("whatsapp") && expandedText.contains("status"))
+            !(expandedText.contains("whatsapp") && (expandedText.contains("status") || expandedText.contains("group")))
         ) {
-            score(Intent.SEND_WHATSAPP, 5.0f, "explicit message and recipient defaults to WhatsApp")
+            if (expandedText.contains("group")) {
+                score(Intent.SEND_WHATSAPP_GROUP, 5.0f, "implicit group message defaults to WhatsApp")
+            } else {
+                score(Intent.SEND_WHATSAPP, 5.0f, "explicit message and recipient defaults to WhatsApp")
+            }
         }
 
         // --- Third-Party App Intents ---

@@ -115,6 +115,29 @@ class EmethAccessibilityService : AccessibilityService() {
             }
             return false
         }
+        
+        fun longTapText(text: String): Boolean {
+            val root = instance?.rootInActiveWindow ?: return false
+            val matches = root.findAccessibilityNodeInfosByText(text)
+            val target = matches.firstOrNull { it.isVisibleToUser } ?: return false
+            return target.performLongClickUpTree()
+        }
+
+        fun tapContentDescription(desc: String): Boolean {
+            val root = instance?.rootInActiveWindow ?: return false
+            val nodes = mutableListOf<AccessibilityNodeInfo>()
+            fun collect(node: AccessibilityNodeInfo) {
+                if (node.isVisibleToUser && node.contentDescription?.toString() == desc) {
+                    nodes.add(node)
+                }
+                for (i in 0 until node.childCount) {
+                    node.getChild(i)?.let { collect(it) }
+                }
+            }
+            collect(root)
+            val target = nodes.firstOrNull() ?: return false
+            return target.performClickUpTree()
+        }
 
         fun snapshot(maxNodes: Int = 40): ScreenSnapshot? {
             val service = instance ?: return null
@@ -168,6 +191,15 @@ class EmethAccessibilityService : AccessibilityService() {
             var node: AccessibilityNodeInfo? = this
             while (node != null) {
                 if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+                node = node.parent
+            }
+            return false
+        }
+        
+        private fun AccessibilityNodeInfo.performLongClickUpTree(): Boolean {
+            var node: AccessibilityNodeInfo? = this
+            while (node != null) {
+                if (node.isLongClickable && node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)) return true
                 node = node.parent
             }
             return false
